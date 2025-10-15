@@ -1,7 +1,7 @@
 flask
 requests
-openai           
-python-dotenv
 numpy
 scipy
-sp80022suite    
+torch
+transformers
+huggingface-hub

@@ -25,7 +25,13 @@ pip install -r requirements.txt
 ```bash
 # Configure sua chave da LLM no .env ou config.py
 python app.py
-# Endpoint disponível em: http://localhost:5000/generate_key
+```
+
+ou
+
+```bash
+# Com seu próprio endpoint
+curl http://localhost:5000/generate_key
 ```
 
 ## Estrutura

@@ -9,5 +9,4 @@ config.py
 
 import os
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "sua-chave-openai")
 DRAND_URL = "https://drand.cloudflare.com/public/latest"
