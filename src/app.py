@@ -28,8 +28,8 @@ def generate_key_endpoint():
         return jsonify({
             "success": True,
             "key_hex": key.hex(),
-            "entropy_shannon": round(hx, 4),
-            "valid_entropy": valid,
+            "entropy_shannon": round(float(hx), 4),
+            "valid_entropy": bool(valid),
             "llm_candidate": candidate,
             "drand_seed": seed,
             "llm_entropy_hex": llm_entropy.hex()
