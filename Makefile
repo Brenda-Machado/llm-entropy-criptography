@@ -55,3 +55,13 @@ test:
 .PHONY: run
 run:
 	$(VENV_DIR)/bin/python src/app.py
+
+# Generate dataset
+.PHONY: generate
+generate:
+	$(VENV_DIR)/bin/python src/generate_training_dataset.py
+
+# Finetune model
+.PHONY: finetune
+finetune:
+	$(VENV_DIR)/bin/python src/finetune_model.py
