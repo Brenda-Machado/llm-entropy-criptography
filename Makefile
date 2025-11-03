@@ -16,8 +16,9 @@ help:
 	@echo "  make dev-install - Install development dependencies"
 	@echo "  make update      - Update all dependencies"
 	@echo "  make clean       - Remove virtual environment"
-	@echo "  make test        - Run tests"
-	@echo "  make run         - Run the app (main.py)"
+	@echo "  make run         - Run the app (app.py)"
+	@echo "  make generate    - Generate training dataset"
+	@echo "  make finetune    - Finetune the model (after generating dataset)"
 
 # Create virtual environment
 .PHONY: venv
@@ -45,11 +46,6 @@ update:
 clean:
 	rm -rf $(VENV_DIR)
 	@echo "Removed virtual environment"
-
-# Run tests (e.g., pytest)
-.PHONY: test
-test:
-	$(VENV_DIR)/bin/python -m pytest
 
 # Run the app
 .PHONY: run
