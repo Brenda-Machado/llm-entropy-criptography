@@ -16,7 +16,7 @@ import secrets
 import time
 from config import OLLAMA_BASE_URL
 
-def load_training_examples(file_path="datasets/training_data_v2.jsonl", n=20, quality_threshold=85):
+def load_training_examples(file_path="datasets/training_data.jsonl", n=20, quality_threshold=85):
     examples = []
 
     if not os.path.exists(file_path):
@@ -57,9 +57,9 @@ def load_training_examples(file_path="datasets/training_data_v2.jsonl", n=20, qu
 
     return examples
 
-def create_advanced_modelfile(base_model="gemma3:latest", output_name="gemma3-entropy-v2"):
+def create_advanced_modelfile(base_model="gemma3:latest", output_name="gemma3-entropy"):
     examples = load_training_examples(
-        file_path="datasets/training_data_v2.jsonl",
+        file_path="datasets/training_data.jsonl",
         n=15,
         quality_threshold=90
     )
@@ -95,14 +95,18 @@ PROCESS:
 4. Output raw hex string with no formatting{examples_text}
 
 Remember: Security depends on unpredictability. Every bit must be as random as possible."""
-    modelfile_content = f"""FROM {base_model}
-PARAMETER temperature 1.2
-PARAMETER top_p 0.98
-PARAMETER top_k 64
-PARAMETER repeat_penalty 1.3
-PARAMETER num_predict 80
-SYSTEM {system_prompt}
+    single_line_prompt = system_prompt.replace("\n", "\\n").replace("\"", "\\\"")
+
+    modelfile_content = f"""from {base_model}
+parameter temperature 1.2
+parameter top_p 0.98
+parameter top_k 64
+parameter repeat_penalty 1.3
+parameter num_predict 80
+system "{single_line_prompt}"
 """
+
+
     
     with open("Modelfile", "w") as f:
         f.write(modelfile_content)
@@ -111,7 +115,7 @@ SYSTEM {system_prompt}
 
     return output_name
 
-def create_model_with_ollama(model_name="gemma3-entropy-v2"):
+def create_model_with_ollama(model_name="gemma3-entropy"):
     try:
         result = subprocess.run(
             ["ollama", "create", model_name, "-f", "Modelfile"],
@@ -139,7 +143,7 @@ def create_model_with_ollama(model_name="gemma3-entropy-v2"):
 
         return False
 
-def comprehensive_model_test(model_name="gemma3-entropy-v2", num_tests=20):
+def comprehensive_model_test(model_name="gemma3-entropy", num_tests=20):
     results = {'entropies': [], 'unique_bytes': [], 'quality_scores': [], 'response_times': [], 'valid_outputs': 0, 'hex_lengths': []}
 
     for _ in range(num_tests):
@@ -194,7 +198,7 @@ def comprehensive_model_test(model_name="gemma3-entropy-v2", num_tests=20):
 
     return results
 
-def compare_with_baseline(finetuned_model="gemma3-entropy-v2", base_model="gemma3:latest", num_tests=30):
+def compare_with_baseline(finetuned_model="gemma3-entropy", base_model="gemma3:latest", num_tests=30):
     base_results = comprehensive_model_test(base_model, num_tests)
     ft_results = comprehensive_model_test(finetuned_model, num_tests)
     metrics = [
@@ -215,18 +219,16 @@ def compare_with_baseline(finetuned_model="gemma3-entropy-v2", base_model="gemma
     return base_results, ft_results
 
 if __name__ == "__main__":
-    if not os.path.exists("datasets/training_data_v2.jsonl"):
+    if not os.path.exists("datasets/training_data.jsonl"):
         print("\nDataset não encontrado")
         sys.exit(1)
 
-    model_name = "gemma3-entropy-v2"
+    model_name = "gemma3-entropy"
     create_advanced_modelfile("gemma3:latest", model_name)
 
     if create_model_with_ollama(model_name):
         test_results = comprehensive_model_test(model_name, num_tests=20)
-        response = input("Comparar com modelo base? [s/N]: ").lower()
-        
-        if response == 's':
-            compare_with_baseline(model_name, "gemma3:latest", num_tests=30)
+        compare_with_baseline(model_name, "gemma3:latest", num_tests=30)
+
     else:
         print("\nCriação do modelo falhou.")

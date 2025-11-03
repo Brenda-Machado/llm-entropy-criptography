@@ -8,224 +8,150 @@ generate_training_dataset.py
 
 import os
 import json
-import hashlib
 import secrets
 import numpy as np
 import time
 
-def calculate_entropy(data_bytes):
-    if not data_bytes:
+def calculate_entropy_corrected(key_bytes):
+    if len(key_bytes) == 0:
         return 0.0
     
-    byte_counts = [0] * 256
+    counts = np.bincount(np.frombuffer(key_bytes, dtype=np.uint8), minlength=256)
+    probs = counts[counts > 0] / len(key_bytes)
 
-    for byte in data_bytes:
-        byte_counts[byte] += 1
+    return float(-np.sum(probs * np.log2(probs)))
 
-    entropy = 0.0
-    total = len(data_bytes)
-
-    for count in byte_counts:
-        if count > 0:
-            p = count / total
-            entropy -= p * np.log2(p)
-
-    return entropy
-
-def generate_high_entropy_key_v2(seed, method='mixed'):
-    if method == 'secrets':
-        return secrets.token_hex(32)
-    
-    elif method == 'hash':
-        result = seed.encode() if isinstance(seed, str) else seed
-
-        for i in range(3):
-            salt = secrets.token_bytes(16)
-            result = hashlib.sha256(result + salt).digest()
-
-        return result.hex()
-    
-    elif method == 'mixed':
-        source1 = secrets.token_bytes(16)
-        source2 = hashlib.sha256((seed + str(time.time())).encode()).digest()[:16]
-        source3 = secrets.token_bytes(16)
-        combined = bytes(a ^ b ^ c for a, b, c in zip(source1, source2, source3))
-
-        return combined.hex() + secrets.token_hex(16)
-    
-    elif method == 'prng':
-        rng = np.random.RandomState(int(hashlib.sha256(seed.encode()).hexdigest()[:8], 16))
-
-        return ''.join(format(rng.randint(0, 255), '02x') for _ in range(32))
-    
-    else:
-        return secrets.token_hex(32)
-
-def validate_key_quality(key_hex):
-    try:
-        key_bytes = bytes.fromhex(key_hex)
-
-    except ValueError:
-        return {'valid': False, 'error': 'Invalid hex'}
-    
-    if len(key_bytes) != 32:
-        return {'valid': False, 'error': 'Invalid length'}
-    
-    entropy = calculate_entropy(key_bytes)
-    unique_bytes = len(set(key_bytes))
-    has_repetition = False
-
-    for i in range(len(key_bytes) - 3):
-        if key_bytes[i] == key_bytes[i+1] == key_bytes[i+2] == key_bytes[i+3]:
-            has_repetition = True
-            break
-
-    expected = len(key_bytes) / 256
-    chi_square = sum((count - expected) ** 2 / expected for count in [key_bytes.count(i) for i in range(256)])
-    quality_score = 0
-
-    if entropy >= 7.9:
-        quality_score += 40
-    elif entropy >= 7.5:
-        quality_score += 30
-    elif entropy >= 7.0:
-        quality_score += 20
-
-    if unique_bytes >= 28:
-        quality_score += 30
-    elif unique_bytes >= 24:
-        quality_score += 20
-
-    if not has_repetition:
-        quality_score += 20
-
-    if chi_square < 300:
-        quality_score += 10
-
-    return {
-        'valid': entropy >= 7.5 and unique_bytes >= 24,
-        'entropy': float(entropy),
-        'unique_bytes': unique_bytes,
-        'has_repetition': has_repetition,
-        'chi_square': float(chi_square),
-        'quality_score': quality_score
-    }
-
-def generate_training_example_v2(seed=None, method='mixed', include_reasoning=False):
-    if seed is None:
-        seed = secrets.token_hex(32)
-
-    max_attempts = 20
-
-    for attempt in range(max_attempts):
-        key = generate_high_entropy_key_v2(seed, method=method)
-        quality = validate_key_quality(key)
-
-        if quality['valid'] and quality['quality_score'] >= 80:
-            break
+def generate_training_examples(num_examples, method='secrets'):
 
     prompt_templates = [
-        f"Generate a high-entropy cryptographic key from seed: {seed}\n\nOutput only 64 hexadecimal characters:",
-        f"Create a cryptographically secure 256-bit key using seed: {seed}\n\nProvide exactly 64 hex characters:",
-        f"Seed: {seed}\n\nGenerate 64 random hex digits (0-9,a-f) with maximum entropy:",
-        f"Using seed {seed}, produce a 32-byte hexadecimal key with high Shannon entropy.\n\nOutput format: 64 hex characters only",
+        "Generate a high-entropy cryptographic key from seed: {seed}\n\nOutput only 64 hexadecimal characters:",
+        "Create a cryptographically secure 256-bit key using seed: {seed}\n\nProvide exactly 64 hex characters:",
+        "Seed: {seed}\n\nGenerate 64 random hex digits (0-9,a-f) with maximum entropy:",
+        "Using seed {seed}, produce a 32-byte hexadecimal key.\n\nOutput format: 64 hex characters",
     ]
-
-    prompt = np.random.choice(prompt_templates)
-
-    return {
-        "prompt": prompt,
-        "completion": key,
-        "metadata": {
-            "entropy": quality['entropy'],
-            "unique_bytes": quality['unique_bytes'],
-            "quality_score": quality['quality_score'],
-            "method": method,
-            "seed": seed,
-            "valid": quality['valid']
-        }
-    }
-
-def generate_diverse_dataset(num_examples=1000, output_file="training_data_v2.jsonl"):
-    methods = ['secrets', 'hash', 'mixed', 'prng']
-    method_weights = [0.4, 0.2, 0.3, 0.1]
-    examples_generated = 0
-    high_quality_count = 0
-
-    with open(output_file, 'w') as f:
-
-        while examples_generated < num_examples:
-            method = np.random.choice(methods, p=method_weights)
-            example = generate_training_example_v2(method=method)
-
-            if example['metadata']['quality_score'] >= 70:
-                training_item = {
-                    "text": f"### Instruction:\n{example['prompt']}\n\n### Response:\n{example['completion']}",
-                    "metadata": example['metadata']
-                }
-                f.write(json.dumps(training_item) + '\n')
-                examples_generated += 1
-
-                if example['metadata']['quality_score'] >= 90:
-                    high_quality_count += 1
     
-    print(f"\n Dataset gerado: {output_file}")
+    examples = []
+    start_time = time.time()
+    
+    for i in range(num_examples):
+        seed = secrets.token_hex(32)
 
-def analyze_dataset_v2(jsonl_file):
+        if method == 'mixed':
+            source1 = secrets.token_bytes(16)
+            source2 = secrets.token_bytes(16)
+            combined = bytes(a ^ b for a, b in zip(source1, source2))
+            key = combined.hex() + secrets.token_hex(16)
+        else:
+            key = secrets.token_hex(32)
+        
+        key_bytes = bytes.fromhex(key)
+        entropy = calculate_entropy_corrected(key_bytes)
+        unique_bytes = len(set(key_bytes))
+        prompt = np.random.choice(prompt_templates).format(seed=seed)
+        
+        examples.append({
+            "text": f"### Instruction:\n{prompt}\n\n### Response:\n{key}",
+            "metadata": {
+                "entropy": entropy,
+                "unique_bytes": unique_bytes,
+                "method": method,
+                "seed": seed
+            }
+        })
+        
+        if (i + 1) % 100 == 0:
+            elapsed = time.time() - start_time
+            rate = (i + 1) / elapsed
+            eta = (num_examples - i - 1) / rate
+            print(f"Progresso: {i+1}/{num_examples} ({(i+1)/num_examples*100:.1f}%) | "
+                  f"Rate: {rate:.1f} ex/s | ETA: {eta:.0f}s")
+    
+    elapsed = time.time() - start_time
+    
+    return examples
+
+def save_dataset(examples, output_file):
+    with open(output_file, 'w') as f:
+        for item in examples:
+            f.write(json.dumps(item) + '\n')
+
+def analyze_dataset(jsonl_file):
     entropies = []
-    unique_bytes_list = []
-    quality_scores = []
-    methods_count = {}
-
-
+    unique_counts = []
+    
     with open(jsonl_file, 'r') as f:
         for line in f:
             data = json.loads(line)
-
             if 'metadata' in data:
-                meta = data['metadata']
-                entropies.append(meta['entropy'])
-                unique_bytes_list.append(meta['unique_bytes'])
-                quality_scores.append(meta['quality_score'])
-                method = meta.get('method', 'unknown')
-                methods_count[method] = methods_count.get(method, 0) + 1
+                entropies.append(data['metadata']['entropy'])
+                unique_counts.append(data['metadata']['unique_bytes'])
     
-    for method, count in sorted(methods_count.items()):
-            print(f"  {method:10s}: {count:4d} ({count/len(entropies)*100:.1f}%)")
+    if entropies:
 
-def create_stratified_splits(input_file, train_ratio=0.8):
-    examples = []
+        print(f"Total de exemplos: {len(entropies)}")
+        print(f"\nEntropia Shannon (esperado: 5.0-5.5 para 32 bytes):")
+        print(f"  Média:   {np.mean(entropies):.4f} bits/byte")
+        print(f"  Mediana: {np.median(entropies):.4f}")
+        print(f"  StdDev:  {np.std(entropies):.4f}")
+        
+        print(f"\nBytes únicos (de 32 possíveis):")
+        print(f"  Média:   {np.mean(unique_counts):.2f}")
 
-    with open(input_file, 'r') as f:
-        for line in f:
-            examples.append(json.loads(line))
+        print(f"\nDistribuição de entropia:")
+        print(f"  ≥5.5: {sum(1 for e in entropies if e >= 5.5)} ({sum(1 for e in entropies if e >= 5.5)/len(entropies)*100:.1f}%)")
+        print(f"  ≥5.0: {sum(1 for e in entropies if e >= 5.0)} ({sum(1 for e in entropies if e >= 5.0)/len(entropies)*100:.1f}%)")
+        print(f"  ≥4.5: {sum(1 for e in entropies if e >= 4.5)} ({sum(1 for e in entropies if e >= 4.5)/len(entropies)*100:.1f}%)")
+        
+        # Mostra exemplo
+        with open(jsonl_file, 'r') as f:
+            first = json.loads(f.readline())
+            print(f"\nExemplo de entrada:")
+            text = first['text']
+            parts = text.split('### Response:\n')
+            if len(parts) == 2:
+                instruction = parts[0].replace('### Instruction:\n', '').strip()
+                response = parts[1].strip()
+                print(f"  Prompt: {instruction[:80]}...")
+                print(f"  Chave:  {response}")
+                print(f"  Entropia: {first['metadata']['entropy']:.4f}")
 
-    high_quality = [e for e in examples if e.get('metadata', {}).get('quality_score', 0) >= 90]
-    mid_quality = [e for e in examples if 80 <= e.get('metadata', {}).get('quality_score', 0) < 90]
-    np.random.shuffle(high_quality)
-    np.random.shuffle(mid_quality)
-    train_high = high_quality[:int(len(high_quality) * train_ratio)]
-    val_high = high_quality[int(len(high_quality) * train_ratio):]
-    train_mid = mid_quality[:int(len(mid_quality) * train_ratio)]
-    val_mid = mid_quality[int(len(mid_quality) * train_ratio):]
-    train_data = train_high + train_mid
-    val_data = val_high + val_mid
-    np.random.shuffle(train_data)
-    np.random.shuffle(val_data)
+def test_entropy_calculation():
+    entropies = []
 
-    with open("datasets/training_data_v2.jsonl", 'w') as f:
-        for item in train_data:
-            f.write(json.dumps(item) + '\n')
-
-    with open("datasets/validation_data_v2.jsonl", 'w') as f:
-        for item in val_data:
-            f.write(json.dumps(item) + '\n')
+    for i in range(10):
+        key = secrets.token_hex(32)
+        key_bytes = bytes.fromhex(key)
+        entropy = calculate_entropy_corrected(key_bytes)
+        unique = len(set(key_bytes))
+        entropies.append(entropy)
+        if i < 3:
+            print(f"  Chave {i+1}: entropia={entropy:.4f}, únicos={unique}/32")
 
 if __name__ == "__main__":
     os.makedirs("datasets", exist_ok=True)
-    temp_file = "datasets/temp_full_dataset.jsonl"
-    generate_diverse_dataset(num_examples=10000, output_file=temp_file)
-    analyze_dataset_v2(temp_file)
-    create_stratified_splits(temp_file)
-    analyze_dataset_v2("datasets/training_data_v2.jsonl")
-    analyze_dataset_v2("datasets/validation_data_v2.jsonl")
+    test_entropy_calculation()
+
+    SIZES = {
+        'tiny': (100, 20),          
+        'small': (1000, 100),        
+        'medium': (5000, 500),       
+        'large': (10000, 1000),      
+        'xlarge': (50000, 5000),     
+    }
+    
+    size = 'large' 
+    train_size, val_size = SIZES[size]
+    train_file = f"datasets/training_data.jsonl"
+    train_examples = generate_training_examples(train_size, method='mixed')
+
+    save_dataset(train_examples, train_file)
+    analyze_dataset(train_file)
+
+    val_file = f"datasets/validation_data.jsonl"
+    val_examples = generate_training_examples(val_size, method='mixed')
+    save_dataset(val_examples, val_file)
+    analyze_dataset(val_file)
+    
+    print(f"\nArquivos gerados:")
+    print(f"  📁 {train_file} ({train_size:,} exemplos)")
+    print(f"  📁 {val_file} ({val_size:,} exemplos)")
