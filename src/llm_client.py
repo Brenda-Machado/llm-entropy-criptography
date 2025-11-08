@@ -14,9 +14,9 @@ import numpy as np
 from typing import Dict, Tuple
 from config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from prompt_engineering import PromptTemplate, TemperatureConfig
-from vector_store_system import VectorStore, QualityMetrics
+from vector_store import VectorStore, QualityMetrics
 
-class ImprovedLLMClient:
+class LLMClient:
     def __init__(self,
                  base_url: str = OLLAMA_BASE_URL,
                  model: str = OLLAMA_MODEL,
@@ -192,7 +192,7 @@ class ImprovedLLMClient:
             'total_time': self.stats['total_time']
         }
     
-    def batch_generate(self, num_keys: int, progress_callback=None) -> Tuple[List[Dict], Dict]:
+    def batch_generate(self, num_keys: int, progress_callback=None) -> Tuple[list[Dict], Dict]:
         results = []
         quality_scores = []
         entropies = []
