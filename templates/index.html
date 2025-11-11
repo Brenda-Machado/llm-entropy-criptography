@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Entropia Criptográfica com IA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #6b7280;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .result-card {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            display: none;
+        }
+
+        .result-card.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        .result-card.error {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .result-card.success {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .key-display {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+            margin: 10px 0;
+            border: 1px solid #e5e7eb;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .metric-value.good {
+            color: #10b981;
+        }
+
+        .metric-value.warning {
+            color: #f59e0b;
+        }
+
+        .metric-value.error {
+            color: #ef4444;
+        }
+
+        .batch-results {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .batch-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .batch-item.failed {
+            border-left-color: #ef4444;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .info-box svg {
+            flex-shrink: 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .stat-title {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Gerador de Entropia Criptográfica</h1>
+            <p>Sistema baseado em IA para geração de chaves criptográficas de alta qualidade</p>
+        </div>
+
+        <div class="main-card">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('single')">Gerar Chave Única</button>
+                <button class="tab" onclick="switchTab('batch')">Geração em Lote</button>
+                <button class="tab" onclick="switchTab('stats')">Estatísticas</button>
+                <button class="tab" onclick="switchTab('config')">Configuração</button>
+            </div>
+
+            <!-- Tab: Gerar Chave Única -->
+            <div id="single" class="tab-content active">
+                <div class="info-box">
+                    <svg width="24" height="24" fill="none" stroke="#3b82f6" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v4m0 4h.01"/>
+                    </svg>
+                    <div>
+                        <strong>Informação:</strong> Configure os parâmetros abaixo e clique em "Gerar Chave" para criar uma chave criptográfica usando IA.
+                    </div>
+                </div>
+
+                <form id="singleForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="keySize">Tamanho da Chave</label>
+                            <select id="keySize" name="key_size">
+                                <option value="128">AES-128 (128 bits)</option>
+                                <option value="192">AES-192 (192 bits)</option>
+                                <option value="256" selected>AES-256 (256 bits)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="strategy">Estratégia de Prompt</label>
+                            <select id="strategy" name="strategy">
+                                <option value="zero-shot">Zero-shot</option>
+                                <option value="few-shot" selected>Few-shot (Recomendado)</option>
+                                <option value="cot">Chain-of-Thought</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="temperature">Preset de Temperatura</label>
+                            <select id="temperature" name="temperature">
+                                <option value="deterministic">Deterministic (0.3)</option>
+                                <option value="balanced">Balanced (0.9)</option>
+                                <option value="high_entropy" selected>High Entropy (1.3) - Recomendado</option>
+                                <option value="extreme_random">Extreme Random (1.8)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="model">Modelo</label>
+                            <select id="model" name="model">
+                                <option value="gemma3:latest">Gemma3 Base</option>
+                                <option value="gemma3-entropy-v2" selected>Gemma3 Fine-tuned</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="useDrand" name="use_drand" checked>
+                            <label for="useDrand" style="margin-bottom: 0;">Usar drand como seed (recomendado)</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="customSeedGroup" style="display: none;">
+                        <label for="customSeed">Seed Customizada (64 caracteres hexadecimais)</label>
+                        <input type="text" id="customSeed" name="seed" placeholder="Digite uma seed customizada...">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <span>Gerar Chave</span>
+                    </button>
+                </form>
+
+                <div id="singleResult" class="result-card"></div>
+            </div>
+
+            <!-- Tab: Geração em Lote -->
+            <div id="batch" class="tab-content">
+                <div class="info-box">
+                    <svg width="24" height="24" fill="none" stroke="#3b82f6" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v4m0 4h.01"/>
+                    </svg>
+                    <div>
+                        <strong>Geração em Lote:</strong> Gere até 100 chaves de uma só vez. Os resultados incluirão estatísticas agregadas.
+                    </div>
+                </div>
+
+                <form id="batchForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="numKeys">Número de Chaves (1-100)</label>
+                            <input type="number" id="numKeys" name="num_keys" min="1" max="100" value="10">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="batchKeySize">Tamanho da Chave</label>
+                            <select id="batchKeySize" name="key_size">
+                                <option value="128">AES-128 (128 bits)</option>
+                                <option value="192">AES-192 (192 bits)</option>
+                                <option value="256" selected>AES-256 (256 bits)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="batchStrategy">Estratégia de Prompt</label>
+                            <select id="batchStrategy" name="strategy">
+                                <option value="zero-shot">Zero-shot</option>
+                                <option value="few-shot" selected>Few-shot</option>
+                                <option value="cot">Chain-of-Thought</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="batchTemperature">Preset de Temperatura</label>
+                            <select id="batchTemperature" name="temperature">
+                                <option value="deterministic">Deterministic</option>
+                                <option value="balanced">Balanced</option>
+                                <option value="high_entropy" selected>High Entropy</option>
+                                <option value="extreme_random">Extreme Random</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <span>Gerar Lote</span>
+                    </button>
+                </form>
+
+                <div id="batchResult" class="result-card"></div>
+            </div>
+
+            <!-- Tab: Estatísticas -->
+            <div id="stats" class="tab-content">
+                <h3 style="margin-bottom: 20px;">📊 Estatísticas do Sistema</h3>
+
+                <button onclick="loadStats()" class="btn btn-secondary" style="margin-bottom: 20px;">
+                    🔄 Atualizar Estatísticas
+                </button>
+
+                <div id="statsContent">
+                    <p style="color: #6b7280;">Clique em "Atualizar Estatísticas" para carregar os dados.</p>
+                </div>
+            </div>
+
+            <!-- Tab: Configuração -->
+            <div id="config" class="tab-content">
+                <h3 style="margin-bottom: 20px;">⚙️ Configuração da API</h3>
+
+                <div class="form-group">
+                    <label for="apiUrl">URL da API</label>
+                    <input type="text" id="apiUrl" value="http://localhost:5000" placeholder="http://localhost:5000">
+                </div>
+
+                <button onclick="testConnection()" class="btn btn-secondary">
+                    🔌 Testar Conexão
+                </button>
+
+                <button onclick="loadPresets()" class="btn btn-secondary" style="margin-left: 10px;">
+                    📋 Ver Presets de Temperatura
+                </button>
+
+                <div id="configResult" class="result-card"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Gerando chaves... Isso pode levar alguns segundos.</p>
+        </div>
+    </div>
+
+    <script>
+        let API_URL = 'http://localhost:5000';
+
+        // Switch entre tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // Controle da seed customizada
+        document.getElementById('useDrand').addEventListener('change', function() {
+            document.getElementById('customSeedGroup').style.display = this.checked ? 'none' : 'block';
+        });
+
+        // Form: Gerar chave única
+        document.getElementById('singleForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            showLoading(true);
+
+            const formData = new FormData(e.target);
+            const data = {};
+            formData.forEach((value, key) => {
+                if (key === 'use_drand') {
+                    data[key] = document.getElementById('useDrand').checked;
+                } else if (key === 'key_size') {
+                    data[key] = parseInt(value);
+                } else {
+                    data[key] = value;
+                }
+            });
+
+            try {
+                const response = await fetch(`${API_URL}/generate_key`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                displaySingleResult(result);
+            } catch (error) {
+                displayError('singleResult', 'Erro ao conectar com a API: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Form: Geração em lote
+        document.getElementById('batchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            showLoading(true);
+
+            const formData = new FormData(e.target);
+            const data = {};
+            formData.forEach((value, key) => {
+                if (key === 'num_keys' || key === 'key_size') {
+                    data[key] = parseInt(value);
+                } else {
+                    data[key] = value;
+                }
+            });
+
+            try {
+                const response = await fetch(`${API_URL}/generate_batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                displayBatchResult(result);
+            } catch (error) {
+                displayError('batchResult', 'Erro ao conectar com a API: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        function displaySingleResult(result) {
+            const resultDiv = document.getElementById('singleResult');
+            
+            if (!result.success) {
+                resultDiv.className = 'result-card show error';
+                resultDiv.innerHTML = `
+                    <h3 style="color: #dc2626; margin-bottom: 10px;">❌ Erro na Geração</h3>
+                    <p><strong>Mensagem:</strong> ${result.error}</p>
+                `;
+                return;
+            }
+
+            const metrics = result.metrics;
+            const qualityClass = metrics.quality_score >= 90 ? 'good' : metrics.quality_score >= 75 ? 'warning' : 'error';
+            const entropyClass = metrics.entropy >= 7.9 ? 'good' : metrics.entropy >= 7.5 ? 'warning' : 'error';
+
+            resultDiv.className = 'result-card show success';
+            resultDiv.innerHTML = `
+                <h3 style="color: #16a34a; margin-bottom: 15px;">✅ Chave Gerada com Sucesso</h3>
+                
+                <div style="margin-bottom: 20px;">
+                    <strong>Chave Gerada (${result.key_size_bits} bits):</strong>
+                    <div class="key-display">
+                        <button class="copy-btn" onclick="copyToClipboard('${result.key_hex}')">📋 Copiar</button>
+                        ${result.key_hex}
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Quality Score</div>
+                        <div class="metric-value ${qualityClass}">${metrics.quality_score.toFixed(1)}/100</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Entropia Shannon</div>
+                        <div class="metric-value ${entropyClass}">${metrics.entropy.toFixed(4)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Bytes Únicos</div>
+                        <div class="metric-value">${metrics.unique_bytes}/${result.key_size_bits/8}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Entropia Válida</div>
+                        <div class="metric-value ${metrics.valid_entropy ? 'good' : 'error'}">${metrics.valid_entropy ? '✓ Sim' : '✗ Não'}</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <strong>Informações de Geração:</strong>
+                    <ul style="margin-top: 10px; padding-left: 20px;">
+                        <li>Modelo: ${result.generation_info.model}</li>
+                        <li>Estratégia: ${result.generation_info.strategy}</li>
+                        <li>Temperatura: ${result.generation_info.temperature_preset} (${result.generation_info.temperature})</li>
+                        <li>Tempo de geração: ${result.generation_info.generation_time.toFixed(2)}s</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        function displayBatchResult(result) {
+            const resultDiv = document.getElementById('batchResult');
+            
+            if (!result.success) {
+                displayError('batchResult', result.error);
+                return;
+            }
+
+            const stats = result.statistics;
+            
+            resultDiv.className = 'result-card show success';
+            resultDiv.innerHTML = `
+                <h3 style="color: #16a34a; margin-bottom: 15px;">✅ Lote Gerado com Sucesso</h3>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total de Chaves</div>
+                        <div class="metric-value">${stats.total}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Taxa de Sucesso</div>
+                        <div class="metric-value good">${stats.success_rate.toFixed(1)}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Quality Médio</div>
+                        <div class="metric-value">${stats.quality_score ? stats.quality_score.mean.toFixed(1) : 'N/A'}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Entropia Média</div>
+                        <div class="metric-value">${stats.entropy ? stats.entropy.mean.toFixed(4) : 'N/A'}</div>
+                    </div>
+                </div>
+
+                ${stats.quality_score ? `
+                <div style="margin-top: 20px;">
+                    <strong>Estatísticas Detalhadas:</strong>
+                    <div class="stats-grid" style="margin-top: 15px;">
+                        <div>
+                            <p><strong>Quality Score:</strong></p>
+                            <ul style="margin-top: 5px; padding-left: 20px;">
+                                <li>Mínimo: ${stats.quality_score.min.toFixed(1)}</li>
+                                <li>Máximo: ${stats.quality_score.max.toFixed(1)}</li>
+                                <li>Mediana: ${stats.quality_score.median.toFixed(1)}</li>
+                                <li>Desvio: ${stats.quality_score.std.toFixed(2)}</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p><strong>Entropia:</strong></p>
+                            <ul style="margin-top: 5px; padding-left: 20px;">
+                                <li>Mínimo: ${stats.entropy.min.toFixed(4)}</li>
+                                <li>Máximo: ${stats.entropy.max.toFixed(4)}</li>
+                                <li>Mediana: ${stats.entropy.median.toFixed(4)}</li>
+                                <li>Desvio: ${stats.entropy.std.toFixed(4)}</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p><strong>Qualidade:</strong></p>
+                            <ul style="margin-top: 5px; padding-left: 20px;">
+                                <li>Alta qualidade (≥90): ${stats.high_quality_count}</li>
+                                <li>Entropia válida (≥7.9): ${stats.valid_entropy_count}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                <div style="margin-top: 20px;">
+                    <button onclick="downloadBatchResults()" class="btn btn-secondary">
+                        💾 Baixar Resultados (JSON)
+                    </button>
+                </div>
+            `;
+
+            window.lastBatchResults = result;
+        }
+
+        async function loadStats() {
+            try {
+                const [vectorStoreRes, clientStatsRes] = await Promise.all([
+                    fetch(`${API_URL}/vector_store/stats`),
+                    fetch(`${API_URL}/client/stats`)
+                ]);
+
+                const vectorStore = await vectorStoreRes.json();
+                const clientStats = await clientStatsRes.json();
+
+                displayStats(vectorStore, clientStats);
+            } catch (error) {
+                displayError('statsContent', 'Erro ao carregar estatísticas: ' + error.message);
+            }
+        }
+
+        function displayStats(vectorStore, clientStats) {
+            const statsDiv = document.getElementById('statsContent');
+            
+            if (!vectorStore.success) {
+                statsDiv.innerHTML = '<p style="color: #dc2626;">Erro ao carregar estatísticas do vector store.</p>';
+                return;
+            }
+
+            const vs = vectorStore.statistics;
+            
+            statsDiv.innerHTML = `
+                <h4 style="margin-bottom: 15px;">📦 Vector Store</h4>
+                <div class="stats-grid">

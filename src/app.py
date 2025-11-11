@@ -10,13 +10,17 @@ app.py
 import traceback
 import os
 import argparse
-from flask import Flask, jsonify, request
+from flask_cors import CORS
+from flask import Flask, jsonify, request, render_template, send_from_directory
 from drand_client import get_entropy_seed
 from llm_client import LLMClient
 from vector_store import VectorStore
 from prompt_engineering import TemperatureConfig
 
-app = Flask(__name__)
+app = Flask(__name__, 
+            template_folder='../templates',
+            static_folder='static')
+CORS(app)
 
 DEFAULT_KEY_SIZE = int(os.getenv("KEY_SIZE_BITS", "256"))
 DEFAULT_STRATEGY = os.getenv("PROMPT_STRATEGY", "few-shot")
@@ -42,11 +46,72 @@ def get_or_create_client(model: str,
     
     return clients_cache[cache_key]
 
+@app.route("/")
+def index():
+    return render_template('index.html')
 
-@app.route("/generate_key", methods=["GET", "POST"])
+@app.route("/api/")
+def api_docs():
+    return jsonify({
+        "name": "Cryptographic Key Generation API v2",
+        "description": "Sistema avançado de geração de entropia com IA",
+        "version": "2.0",
+        "endpoints": {
+            "/": "Interface web",
+            "/api/": "Documentação da API",
+            "/generate_key": {
+                "methods": ["GET", "POST"],
+                "description": "Gera uma chave criptográfica",
+                "params": {
+                    "key_size": "Tamanho em bits (128, 192, 256)",
+                    "strategy": "Estratégia de prompt (zero-shot, few-shot, cot)",
+                    "temperature": "Preset de temperatura",
+                    "model": "Nome do modelo",
+                    "use_drand": "Usar drand como seed",
+                    "seed": "Seed customizado"
+                }
+            },
+            "/generate_batch": {
+                "methods": ["POST"],
+                "description": "Gera múltiplas chaves",
+                "params": {
+                    "num_keys": "Número de chaves (máx 100)"
+                }
+            },
+            "/vector_store/stats": {
+                "methods": ["GET"],
+                "description": "Estatísticas do vector store"
+            },
+            "/vector_store/top_examples": {
+                "methods": ["GET"],
+                "description": "Top exemplos do vector store"
+            },
+            "/client/stats": {
+                "methods": ["GET"],
+                "description": "Estatísticas de uso dos clientes"
+            },
+            "/temperature/presets": {
+                "methods": ["GET"],
+                "description": "Lista presets de temperatura"
+            },
+            "/config": {
+                "methods": ["GET"],
+                "description": "Configuração atual"
+            },
+            "/health": {
+                "methods": ["GET"],
+                "description": "Health check"
+            }
+        }
+    })
+
+
+@app.route("/generate_key", methods=["GET", "POST", "OPTIONS"])
 def generate_key_endpoint():
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+    
     try:
-
         if request.method == "POST":
             params = request.get_json() or {}
         else:
@@ -56,9 +121,15 @@ def generate_key_endpoint():
         strategy = params.get('strategy', DEFAULT_STRATEGY)
         temperature_preset = params.get('temperature', DEFAULT_TEMPERATURE)
         model = params.get('model', DEFAULT_MODEL)
-        use_drand = params.get('use_drand', 'true').lower() == 'true'
-        custom_seed = params.get('seed')
         
+        use_drand_param = params.get('use_drand', True)
+        if isinstance(use_drand_param, str):
+            use_drand = use_drand_param.lower() == 'true'
+        else:
+            use_drand = bool(use_drand_param)
+        
+        custom_seed = params.get('seed')
+
         if key_size_bits not in [128, 192, 256]:
             return jsonify({
                 "success": False,
@@ -93,7 +164,6 @@ def generate_key_endpoint():
             strategy=strategy,
             temperature_preset=temperature_preset
         )
-
         result = client.generate_key(seed, store_result=True)
         
         if result['success']:
@@ -135,8 +205,11 @@ def generate_key_endpoint():
         }), 500
 
 
-@app.route("/generate_batch", methods=["POST"])
+@app.route("/generate_batch", methods=["POST", "OPTIONS"])
 def generate_batch_endpoint():
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+    
     try:
         params = request.get_json() or {}
         
@@ -159,6 +232,7 @@ def generate_batch_endpoint():
             temperature_preset=temperature_preset
         )
         
+        # Gerar chaves
         results, stats = client.batch_generate(num_keys)
         
         return jsonify({
@@ -279,7 +353,8 @@ def health_check():
             "prompt_engineering": True,
             "multiple_strategies": True,
             "temperature_control": True,
-            "multiple_key_sizes": True
+            "multiple_key_sizes": True,
+            "web_interface": True
         }
     }), 200
 
@@ -303,59 +378,6 @@ def config_endpoint():
     })
 
 
-@app.route("/", methods=["GET"])
-def index():
-    return jsonify({
-        "name": "Cryptographic Key Generation API v2",
-        "description": "Sistema avançado de geração de entropia com IA",
-        "endpoints": {
-            "/generate_key": {
-                "methods": ["GET", "POST"],
-                "description": "Gera uma chave criptográfica",
-                "params": {
-                    "key_size": "Tamanho em bits (128, 192, 256)",
-                    "strategy": "Estratégia de prompt (zero-shot, few-shot, cot)",
-                    "temperature": "Preset de temperatura",
-                    "model": "Nome do modelo",
-                    "use_drand": "Usar drand como seed",
-                    "seed": "Seed customizado"
-                }
-            },
-            "/generate_batch": {
-                "methods": ["POST"],
-                "description": "Gera múltiplas chaves",
-                "params": {
-                    "num_keys": "Número de chaves (máx 100)"
-                }
-            },
-            "/vector_store/stats": {
-                "methods": ["GET"],
-                "description": "Estatísticas do vector store"
-            },
-            "/vector_store/top_examples": {
-                "methods": ["GET"],
-                "description": "Top exemplos do vector store"
-            },
-            "/client/stats": {
-                "methods": ["GET"],
-                "description": "Estatísticas de uso dos clientes"
-            },
-            "/temperature/presets": {
-                "methods": ["GET"],
-                "description": "Lista presets de temperatura"
-            },
-            "/config": {
-                "methods": ["GET"],
-                "description": "Configuração atual"
-            },
-            "/health": {
-                "methods": ["GET"],
-                "description": "Health check"
-            }
-        }
-    })
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="API Flask para geração de chaves criptográficas")
     parser.add_argument("--host", default="0.0.0.0", help="Host (padrão: 0.0.0.0)")
@@ -373,7 +395,8 @@ if __name__ == "__main__":
     print(f"  Temperature: {DEFAULT_TEMPERATURE}")
     print(f"  Model: {DEFAULT_MODEL}")
     print("="*80)
-    print(f"Servidor iniciando em http://{args.host}:{args.port}")
+    print(f"Interface Web: http://{args.host}:{args.port}")
+    print(f"API Docs: http://{args.host}:{args.port}/api/")
     print("="*80)
     
     app.run(debug=args.debug, host=args.host, port=args.port)

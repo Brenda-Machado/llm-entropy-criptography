@@ -11,4 +11,5 @@ wheels/
 
 # Data folders & files
 /datasets
+/fine_tuning_results
 Modelfile
