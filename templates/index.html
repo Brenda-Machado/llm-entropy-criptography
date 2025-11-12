@@ -399,10 +399,10 @@
 
         <div class="main-card">
             <div class="tabs">
-                <button class="tab active" onclick="switchTab('single')">Gerar Chave Única</button>
-                <button class="tab" onclick="switchTab('batch')">Geração em Lote</button>
-                <button class="tab" onclick="switchTab('stats')">Estatísticas</button>
-                <button class="tab" onclick="switchTab('config')">Configuração</button>
+                <button class="tab active" onclick="switchTab('single', event)">Gerar Chave Única</button>
+                <button class="tab" onclick="switchTab('batch', event)">Geração em Lote</button>
+                <button class="tab" onclick="switchTab('stats', event)">Estatísticas</button>
+                <button class="tab" onclick="switchTab('config', event)">Configuração</button>
             </div>
 
             <!-- Tab: Gerar Chave Única -->
@@ -417,7 +417,7 @@
                     </div>
                 </div>
 
-                <form id="singleForm">
+                <form id="singleForm" onsubmit="handleSingleFormSubmit(event)">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="keySize">Tamanho da Chave</label>
@@ -490,7 +490,7 @@
                     </div>
                 </div>
 
-                <form id="batchForm">
+                <form id="batchForm" onsubmit="handleBatchFormSubmit(event)">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="numKeys">Número de Chaves (1-100)</label>
@@ -582,12 +582,24 @@
         let API_URL = 'http://localhost:5000';
 
         // Switch entre tabs
-        function switchTab(tabName) {
+        function switchTab(tabName, event) {
+            if (event) {
+                event.preventDefault();
+            }
+            
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
-            event.target.classList.add('active');
-            document.getElementById(tabName).classList.add('active');
+            // Encontrar o botão clicado
+            const clickedTab = event ? event.target : document.querySelector(`.tab[onclick*="${tabName}"]`);
+            if (clickedTab) {
+                clickedTab.classList.add('active');
+            }
+            
+            const tabContent = document.getElementById(tabName);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
         }
 
         // Controle da seed customizada
@@ -596,22 +608,28 @@
         });
 
         // Form: Gerar chave única
-        document.getElementById('singleForm').addEventListener('submit', async function(e) {
+        function handleSingleFormSubmit(e) {
             e.preventDefault();
+            
             showLoading(true);
 
             const formData = new FormData(e.target);
             const data = {};
             formData.forEach((value, key) => {
-                if (key === 'use_drand') {
-                    data[key] = document.getElementById('useDrand').checked;
-                } else if (key === 'key_size') {
+                if (key === 'key_size') {
                     data[key] = parseInt(value);
                 } else {
                     data[key] = value;
                 }
             });
+            
+            // Adicionar use_drand como boolean
+            data.use_drand = document.getElementById('useDrand').checked;
 
+            generateSingleKey(data);
+        }
+
+        async function generateSingleKey(data) {
             try {
                 const response = await fetch(`${API_URL}/generate_key`, {
                     method: 'POST',
@@ -626,11 +644,12 @@
             } finally {
                 showLoading(false);
             }
-        });
+        }
 
         // Form: Geração em lote
-        document.getElementById('batchForm').addEventListener('submit', async function(e) {
+        function handleBatchFormSubmit(e) {
             e.preventDefault();
+            
             showLoading(true);
 
             const formData = new FormData(e.target);
@@ -643,6 +662,10 @@
                 }
             });
 
+            generateBatch(data);
+        }
+
+        async function generateBatch(data) {
             try {
                 const response = await fetch(`${API_URL}/generate_batch`, {
                     method: 'POST',
@@ -657,7 +680,7 @@
             } finally {
                 showLoading(false);
             }
-        });
+        }
 
         function displaySingleResult(result) {
             const resultDiv = document.getElementById('singleResult');
@@ -823,6 +846,149 @@
             statsDiv.innerHTML = `
                 <h4 style="margin-bottom: 15px;">📦 Vector Store</h4>
                 <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title">Total de Exemplos</div>
+                        <div class="stat-value">${vs.total_examples}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Alta Qualidade (≥90)</div>
+                        <div class="stat-value">${vs.high_quality_count}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Entropia Média</div>
+                        <div class="stat-value">${vs.entropy_stats.mean.toFixed(4)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Quality Médio</div>
+                        <div class="stat-value">${vs.quality_stats.mean.toFixed(1)}</div>
+                    </div>
                 </div>
-    `;
-}
+
+                ${clientStats.success && clientStats.total_clients > 0 ? `
+                    <h4 style="margin: 30px 0 15px;">🖥️ Estatísticas de Clientes</h4>
+                    <p>Total de clientes em cache: <strong>${clientStats.total_clients}</strong></p>
+                    <div style="margin-top: 15px;">
+                        ${Object.entries(clientStats.clients).map(([key, stats]) => `
+                            <div class="stat-card" style="margin-bottom: 15px; text-align: left;">
+                                <h5 style="margin-bottom: 10px; color: #667eea;">${key}</h5>
+                                <ul style="padding-left: 20px;">
+                                    <li>Total de requisições: ${stats.total_requests}</li>
+                                    <li>Sucesso: ${stats.successful_requests} (${stats.success_rate.toFixed(1)}%)</li>
+                                    <li>Falhas: ${stats.failed_requests}</li>
+                                    <li>Tempo médio: ${stats.average_generation_time.toFixed(2)}s</li>
+                                </ul>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        async function testConnection() {
+            API_URL = document.getElementById('apiUrl').value;
+            const resultDiv = document.getElementById('configResult');
+            
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const result = await response.json();
+                
+                resultDiv.className = 'result-card show success';
+                resultDiv.innerHTML = `
+                    <h3 style="color: #16a34a;">✅ Conexão Estabelecida</h3>
+                    <p><strong>Status:</strong> ${result.status}</p>
+                    <p><strong>Versão:</strong> ${result.version}</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul style="margin-top: 10px; padding-left: 20px;">
+                        ${Object.entries(result.features).map(([key, value]) => 
+                            `<li>${key}: ${value ? '✓' : '✗'}</li>`
+                        ).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                displayError('configResult', 'Erro ao conectar: ' + error.message);
+            }
+        }
+
+        async function loadPresets() {
+            const resultDiv = document.getElementById('configResult');
+            
+            try {
+                const response = await fetch(`${API_URL}/temperature/presets`);
+                const result = await response.json();
+                
+                if (!result.success) {
+                    displayError('configResult', result.error);
+                    return;
+                }
+                
+                resultDiv.className = 'result-card show';
+                resultDiv.innerHTML = `
+                    <h3 style="margin-bottom: 15px;">🌡️ Presets de Temperatura Disponíveis</h3>
+                    ${Object.entries(result.presets).map(([name, config]) => `
+                        <div class="stat-card" style="margin-bottom: 15px; text-align: left;">
+                            <h4 style="color: #667eea; margin-bottom: 10px;">${name}</h4>
+                            <p style="color: #6b7280; margin-bottom: 10px;">${config.description}</p>
+                            <ul style="padding-left: 20px;">
+                                <li>Temperature: ${config.temperature}</li>
+                                <li>Top-p: ${config.top_p}</li>
+                                <li>Top-k: ${config.top_k}</li>
+                                <li>Repeat Penalty: ${config.repeat_penalty}</li>
+                            </ul>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                displayError('configResult', 'Erro ao carregar presets: ' + error.message);
+            }
+        }
+
+        function displayError(elementId, message) {
+            const resultDiv = document.getElementById(elementId);
+            resultDiv.className = 'result-card show error';
+            resultDiv.innerHTML = `
+                <h3 style="color: #dc2626; margin-bottom: 10px;">❌ Erro</h3>
+                <p>${message}</p>
+            `;
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.className = show ? 'loading-overlay show' : 'loading-overlay';
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Chave copiada para a área de transferência!');
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
+                alert('Erro ao copiar. Tente selecionar manualmente.');
+            });
+        }
+
+        function downloadBatchResults() {
+            if (!window.lastBatchResults) {
+                alert('Nenhum resultado para baixar.');
+                return;
+            }
+
+            const dataStr = JSON.stringify(window.lastBatchResults, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `batch_results_${new Date().toISOString()}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('apiUrl').addEventListener('change', function() {
+            API_URL = this.value;
+        });
+
+        window.addEventListener('load', function() {
+        });
+    </script>
+</body>
+</html>
