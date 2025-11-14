@@ -14,4 +14,5 @@ def get_entropy_seed():
     response = requests.get(DRAND_URL)
     response.raise_for_status()
     data = response.json()
+    
     return data['randomness']      

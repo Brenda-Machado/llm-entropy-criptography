@@ -22,14 +22,10 @@ pip install -r requirements.txt
 
 ## Uso
 
-```bash
-python app.py
-```
-
-ou
+Faça o setup do Ollama server, consulte as instruções em [SETUP_OLLAMA.md](SETUP_OLLAMA.md).
 
 ```bash
-curl http://localhost:5000/generate_key
+make run
 ```
 
 ## Estrutura
