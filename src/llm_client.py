@@ -8,10 +8,13 @@ llm_client.py - Integração com Ollama (Gemma3 270M)
 """
 
 import requests
+import json
 import time
 import secrets
 import numpy as np
-from typing import Dict, Tuple
+
+
+from typing import Dict, Optional, Tuple
 from config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from prompt_engineering import PromptTemplate, TemperatureConfig
 from vector_store import VectorStore, QualityMetrics
@@ -26,7 +29,6 @@ class LLMClient:
                  vector_store_path: str = "datasets/vector_store.jsonl",
                  max_retries: int = 3,
                  timeout: int = 300):
-
         self.base_url = base_url
         self.model = model
         self.key_size_bits = key_size_bits
@@ -34,6 +36,7 @@ class LLMClient:
         self.temperature_preset = temperature_preset
         self.max_retries = max_retries
         self.timeout = timeout
+        
         self.prompt_template = PromptTemplate(
             key_size_bits=key_size_bits,
             strategy=strategy
@@ -41,7 +44,6 @@ class LLMClient:
         
         self.vector_store = VectorStore(vector_store_path)
         self.temperature_config = TemperatureConfig.get_ollama_params(temperature_preset)
-        
         self.stats = {
             'total_requests': 0,
             'successful_requests': 0,
@@ -53,8 +55,10 @@ class LLMClient:
     def generate_key(self, seed: str, store_result: bool = True) -> Dict:
         self.stats['total_requests'] += 1
         start_time = time.time()
+        
+        # Gerar prompt
         prompt = self.prompt_template.generate_prompt(seed)
-
+        
         request_params = {
             "model": self.model,
             "prompt": prompt,
@@ -62,7 +66,7 @@ class LLMClient:
             "num_predict": self.key_size_bits // 4 + 50,  
             **self.temperature_config
         }
-
+        
         for attempt in range(self.max_retries):
             try:
                 response = requests.post(
@@ -110,7 +114,6 @@ class LLMClient:
                 time.sleep(1)
         
         self.stats['failed_requests'] += 1
-
         return self._error_result("Número máximo de tentativas excedido")
     
     def _extract_hex(self, output: str) -> str:
@@ -135,7 +138,6 @@ class LLMClient:
         
         key_hex = hex_chars[:expected_length]
         key_bytes = bytes.fromhex(key_hex)
-
         entropy = QualityMetrics.calculate_shannon_entropy(key_bytes)
         unique_bytes = QualityMetrics.count_unique_bytes(key_bytes)
         quality_score = QualityMetrics.calculate_quality_score(key_bytes, self.key_size_bits)
@@ -146,6 +148,7 @@ class LLMClient:
             'success': True,
             'key_hex': key_hex,
             'key_size_bits': self.key_size_bits,
+            'generation_time': generation_time,
             'metrics': {
                 'entropy': float(entropy),
                 'unique_bytes': int(unique_bytes),
@@ -175,7 +178,8 @@ class LLMClient:
             'generation_info': {
                 'model': self.model,
                 'strategy': self.strategy,
-                'temperature_preset': self.temperature_preset
+                'temperature_preset': self.temperature_preset,
+                'generation_time': 0.0 
             }
         }
     
