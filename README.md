@@ -37,6 +37,10 @@ make run
 - `requirements.txt`: dependências
 
 
+
+> [!IMPORTANT]
+> Essa implementação foi parcialmente feita com o uso da IA Claude, como objetivo da disciplina de Tópicos Especiais em Aplicações Tecnológicas I (INE5448) 2025/2. 
+
 ## Licença
 
 MIT

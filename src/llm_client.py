@@ -1,9 +1,7 @@
 """
 PoC : Avaliação do Uso de Inteligência Artificial na Geração de Entropia para Chaves Criptográficas
 
-Author: Brenda Silva Machado
-
-llm_client.py - Integração com Ollama (Gemma3 270M)
+llm_client.py - Integração com Ollama
 
 """
 
@@ -56,7 +54,6 @@ class LLMClient:
         self.stats['total_requests'] += 1
         start_time = time.time()
         
-        # Gerar prompt
         prompt = self.prompt_template.generate_prompt(seed)
         
         request_params = {
