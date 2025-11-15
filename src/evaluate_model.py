@@ -1,10 +1,7 @@
 """
 PoC : Avaliação do Uso de Inteligência Artificial na Geração de Entropia para Chaves Criptográficas
 
-Author: Brenda Silva Machado
-
-evaluate_model.py - Avalia performance do modelo antes e depois do fine-tuning
-
+evaluate_model.py
 """
 
 import requests
