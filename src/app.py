@@ -14,6 +14,7 @@ from drand_client import get_entropy_seed
 from llm_client import LLMClient
 from vector_store import VectorStore
 from prompt_engineering import TemperatureConfig
+from nist_endpoints import add_nist_endpoints
 
 app = Flask(__name__, 
             template_folder='../templates',
@@ -43,6 +44,8 @@ def get_or_create_client(model: str,
         )
     
     return clients_cache[cache_key]
+
+add_nist_endpoints(app, clients_cache, get_or_create_client)
 
 @app.route("/")
 def index():
