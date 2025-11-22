@@ -54,6 +54,7 @@
             gap: 10px;
             margin-bottom: 30px;
             border-bottom: 2px solid #e5e7eb;
+            flex-wrap: wrap;
         }
 
         .tab {
@@ -177,6 +178,15 @@
             background: #e5e7eb;
         }
 
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
         .result-card {
             margin-top: 30px;
             padding: 20px;
@@ -269,22 +279,39 @@
             color: #ef4444;
         }
 
-        .batch-results {
-            max-height: 400px;
-            overflow-y: auto;
+        .nist-tests-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
             margin-top: 20px;
         }
 
-        .batch-item {
+        .nist-test-card {
             background: white;
             padding: 15px;
-            margin-bottom: 10px;
             border-radius: 8px;
             border-left: 4px solid #667eea;
         }
 
-        .batch-item.failed {
+        .nist-test-card.passed {
+            border-left-color: #10b981;
+        }
+
+        .nist-test-card.failed {
             border-left-color: #ef4444;
+        }
+
+        .nist-test-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .nist-test-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #6b7280;
         }
 
         .spinner {
@@ -323,6 +350,7 @@
             padding: 30px;
             border-radius: 12px;
             text-align: center;
+            max-width: 400px;
         }
 
         .loading-spinner {
@@ -345,34 +373,28 @@
             gap: 10px;
         }
 
+        .info-box.warning {
+            background: #fffbeb;
+            border-color: #fcd34d;
+        }
+
         .info-box svg {
             flex-shrink: 0;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
         }
 
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-        }
-
-        .stat-title {
-            font-size: 0.9rem;
-            color: #6b7280;
-            margin-bottom: 10px;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #667eea;
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
         }
 
         @media (max-width: 768px) {
@@ -387,6 +409,10 @@
             .tabs {
                 flex-wrap: wrap;
             }
+
+            .nist-tests-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -394,12 +420,13 @@
     <div class="container">
         <div class="header">
             <h1>🔐 Gerador de Entropia Criptográfica</h1>
-            <p>Sistema baseado em IA para geração de chaves criptográficas de alta qualidade</p>
+            <p>Sistema baseado em IA para geração de chaves criptográficas</p>
         </div>
 
         <div class="main-card">
             <div class="tabs">
-                <button class="tab active" onclick="switchTab('single', event)">Gerar Chave Única</button>
+                <button class="tab active" onclick="switchTab('single', event)">Gerar Chave</button>
+                <button class="tab" onclick="switchTab('nist', event)">Validação NIST</button>
                 <button class="tab" onclick="switchTab('batch', event)">Geração em Lote</button>
                 <button class="tab" onclick="switchTab('stats', event)">Estatísticas</button>
                 <button class="tab" onclick="switchTab('config', event)">Configuração</button>
@@ -476,6 +503,65 @@
                 </form>
 
                 <div id="singleResult" class="result-card"></div>
+            </div>
+
+            <!-- Tab: Validação NIST -->
+            <div id="nist" class="tab-content">
+                <div class="info-box warning">
+                    <svg width="24" height="24" fill="none" stroke="#f59e0b" stroke-width="2">
+                        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <div>
+                        <strong>Testes NIST SP 800-22:</strong> Esta bateria de 15 testes estatísticos verifica a qualidade da aleatoriedade das chaves. O processo pode levar de 10 a 60 segundos dependendo do tamanho da chave.
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px;">🔬 Validar Chave Existente</h3>
+                    <form id="nistValidateForm" onsubmit="handleNISTValidate(event)">
+                        <div class="form-group">
+                            <label for="nistKeyHex">Chave Hexadecimal (256 bits = 64 caracteres hex)</label>
+                            <textarea id="nistKeyHex" name="key_hex" rows="3" placeholder="Cole aqui a chave em formato hexadecimal (ex: a3f5b82c9e1d47f6...)"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">
+                            🧪 Executar Testes NIST
+                        </button>
+                    </form>
+                </div>
+
+                <div style="border-top: 2px solid #e5e7eb; padding-top: 30px;">
+                    <h3 style="margin-bottom: 15px;">🎯 Gerar e Validar com NIST</h3>
+                    <p style="color: #6b7280; margin-bottom: 15px;">Gera uma nova chave e executa automaticamente a bateria completa de testes NIST.</p>
+                    
+                    <form id="nistGenerateForm" onsubmit="handleNISTGenerate(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="nistKeySize">Tamanho da Chave</label>
+                                <select id="nistKeySize" name="key_size">
+                                    <option value="128">128 bits</option>
+                                    <option value="192">192 bits</option>
+                                    <option value="256" selected>256 bits</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="nistStrategy">Estratégia</label>
+                                <select id="nistStrategy" name="strategy">
+                                    <option value="zero-shot">Zero-shot</option>
+                                    <option value="few-shot" selected>Few-shot</option>
+                                    <option value="cot">Chain-of-Thought</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            ⚡ Gerar e Validar com NIST
+                        </button>
+                    </form>
+                </div>
+
+                <div id="nistResult" class="result-card"></div>
             </div>
 
             <!-- Tab: Geração em Lote -->
@@ -574,7 +660,13 @@
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <p>Gerando chaves... Isso pode levar alguns segundos.</p>
+            <p id="loadingMessage">Processando... Isso pode levar alguns segundos.</p>
+            <div id="loadingProgress" style="display:none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <p id="progressText" style="margin-top: 10px; color: #6b7280; font-size: 0.9rem;"></p>
+            </div>
         </div>
     </div>
 
@@ -590,7 +682,6 @@
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
-            // Encontrar o botão clicado
             const clickedTab = event ? event.target : document.querySelector(`.tab[onclick*="${tabName}"]`);
             if (clickedTab) {
                 clickedTab.classList.add('active');
@@ -607,11 +698,281 @@
             document.getElementById('customSeedGroup').style.display = this.checked ? 'none' : 'block';
         });
 
+        // NIST: Validar chave existente
+        async function handleNISTValidate(e) {
+            e.preventDefault();
+            
+            const keyHex = document.getElementById('nistKeyHex').value.trim().replace(/\s/g, '');
+            
+            if (!keyHex) {
+                alert('Por favor, insira uma chave hexadecimal.');
+                return;
+            }
+            
+            // Valida formato hex
+            if (!/^[0-9a-fA-F]+$/.test(keyHex)) {
+                alert('Chave inválida. Use apenas caracteres hexadecimais (0-9, a-f).');
+                return;
+            }
+            
+            showLoading(true, 'Executando testes NIST... Isso pode levar 10-60 segundos.');
+            
+            try {
+                const response = await fetch(`${API_URL}/nist/validate_key`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key_hex: keyHex })
+                });
+
+                const result = await response.json();
+                displayNISTResult(result);
+            } catch (error) {
+                displayError('nistResult', 'Erro ao conectar com a API: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // NIST: Gerar e validar
+        async function handleNISTGenerate(e) {
+            e.preventDefault();
+            
+            showLoading(true, 'Gerando chave e executando testes NIST... Isso pode levar 20-90 segundos.');
+            
+            const formData = new FormData(e.target);
+            const data = {
+                key_size: parseInt(formData.get('key_size')),
+                strategy: formData.get('strategy'),
+                use_drand: true
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/nist/generate_and_validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                displayNISTGenerateResult(result);
+            } catch (error) {
+                displayError('nistResult', 'Erro ao conectar com a API: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayNISTResult(result) {
+            const resultDiv = document.getElementById('nistResult');
+            
+            if (!result.success) {
+                resultDiv.className = 'result-card show error';
+                resultDiv.innerHTML = `
+                    <h3 style="color: #dc2626; margin-bottom: 10px;">❌ Erro na Validação</h3>
+                    <p><strong>Mensagem:</strong> ${result.error}</p>
+                `;
+                return;
+            }
+
+            const nist = result.nist_results;
+            const summary = nist.summary;
+            const passRateClass = summary.pass_rate >= 95 ? 'good' : summary.pass_rate >= 85 ? 'warning' : 'error';
+
+            resultDiv.className = 'result-card show success';
+            resultDiv.innerHTML = `
+                <h3 style="color: #16a34a; margin-bottom: 15px;">✅ Validação NIST Concluída</h3>
+                
+                <div style="margin-bottom: 20px;">
+                    <strong>Chave Testada (${nist.total_bits} bits):</strong>
+                    <div class="key-display">
+                        <button class="copy-btn" onclick="copyToClipboard('${result.key_hex}')">📋 Copiar</button>
+                        ${result.key_hex}
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Taxa de Aprovação</div>
+                        <div class="metric-value ${passRateClass}">${summary.pass_rate.toFixed(1)}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Testes Aprovados</div>
+                        <div class="metric-value good">${summary.passed}/${summary.total_tests}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Testes Reprovados</div>
+                        <div class="metric-value ${summary.failed > 0 ? 'error' : 'good'}">${summary.failed}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Qualidade Criptográfica</div>
+                        <div class="metric-value ${summary.pass_rate >= 95 ? 'good' : 'error'}">${summary.pass_rate >= 95 ? '✓ Adequado' : '✗ Inadequado'}</div>
+                    </div>
+                </div>
+
+                <h4 style="margin: 25px 0 15px;">📋 Resultados Detalhados dos Testes:</h4>
+                
+                <div class="nist-tests-grid">
+                    ${nist.tests.map((test, index) => `
+                        <div class="nist-test-card ${test.passed ? 'passed' : 'failed'}">
+                            <div class="nist-test-title">
+                                ${test.passed ? '✅' : '❌'} ${index + 1}. ${test.test_name}
+                            </div>
+                            <div class="nist-test-stats">
+                                <span>P-value: ${test.p_value ? test.p_value.toFixed(6) : 'N/A'}</span>
+                                <span><strong>${test.passed ? 'PASSOU' : 'FALHOU'}</strong></span>
+                            </div>
+                            ${test.error ? `<p style="color: #dc2626; font-size: 0.85rem; margin-top: 5px;">Erro: ${test.error}</p>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="margin-top: 25px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <h4 style="margin-bottom: 10px;">📊 Interpretação dos Resultados:</h4>
+                    <ul style="padding-left: 20px; line-height: 1.8;">
+                        <li><strong>≥95% aprovação:</strong> Excelente - Adequado para uso criptográfico</li>
+                        <li><strong>≥85% aprovação:</strong> Bom - Pode ser adequado para alguns usos</li>
+                        <li><strong>≥70% aprovação:</strong> Moderado - Não recomendado para criptografia</li>
+                        <li><strong>&lt;70% aprovação:</strong> Ruim - Inadequado para uso criptográfico</li>
+                    </ul>
+                    <p style="margin-top: 15px; color: #6b7280; font-size: 0.9rem;">
+                        <strong>Nota:</strong> P-value ≥ 0.01 indica aprovação no teste (nível de significância α = 0.01)
+                    </p>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <button onclick="downloadNISTReport()" class="btn btn-secondary">
+                        💾 Baixar Relatório Completo
+                    </button>
+                </div>
+            `;
+
+            window.lastNISTResult = result;
+        }
+
+        function displayNISTGenerateResult(result) {
+            const resultDiv = document.getElementById('nistResult');
+            
+            if (!result.success) {
+                resultDiv.className = 'result-card show error';
+                resultDiv.innerHTML = `
+                    <h3 style="color: #dc2626; margin-bottom: 10px;">❌ Erro</h3>
+                    <p><strong>Mensagem:</strong> ${result.error}</p>
+                `;
+                return;
+            }
+
+            const nist = result.nist_validation;
+            const summary = nist.summary;
+            const quality = result.overall_quality;
+            const passRateClass = summary.pass_rate >= 95 ? 'good' : summary.pass_rate >= 85 ? 'warning' : 'error';
+            const qualityClass = quality.grade === 'EXCELLENT' ? 'good' : quality.grade === 'GOOD' ? 'warning' : 'error';
+
+            resultDiv.className = 'result-card show success';
+            resultDiv.innerHTML = `
+                <h3 style="color: #16a34a; margin-bottom: 15px;">✅ Chave Gerada e Validada com NIST</h3>
+                
+                <div style="margin-bottom: 20px;">
+                    <strong>Chave Gerada (${result.key_hex.length * 4} bits):</strong>
+                    <div class="key-display">
+                        <button class="copy-btn" onclick="copyToClipboard('${result.key_hex}')">📋 Copiar</button>
+                        ${result.key_hex}
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Score Combinado</div>
+                        <div class="metric-value ${qualityClass}">${quality.combined_score.toFixed(1)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Taxa NIST</div>
+                        <div class="metric-value ${passRateClass}">${summary.pass_rate.toFixed(1)}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Classificação</div>
+                        <div class="metric-value ${qualityClass}">${quality.grade}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Grau Criptográfico</div>
+                        <div class="metric-value ${quality.cryptographic_grade ? 'good' : 'error'}">${quality.cryptographic_grade ? '✓ SIM' : '✗ NÃO'}</div>
+                    </div>
+                </div>
+
+                <div style="margin: 20px 0; padding: 15px; background: ${quality.cryptographic_grade ? '#f0fdf4' : '#fffbeb'}; border-radius: 8px; border: 1px solid ${quality.cryptographic_grade ? '#bbf7d0' : '#fcd34d'};">
+                    <strong style="color: ${quality.cryptographic_grade ? '#16a34a' : '#f59e0b'};">
+                        ${quality.cryptographic_grade ? '✅' : '⚠️'} ${quality.recommendation}
+                    </strong>
+                </div>
+
+                <h4 style="margin: 25px 0 15px;">📊 Métricas de Geração:</h4>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Quality Score</div>
+                        <div class="metric-value">${result.generation_metrics.quality_score.toFixed(1)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Entropia Shannon</div>
+                        <div class="metric-value">${result.generation_metrics.entropy.toFixed(4)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Bytes Únicos</div>
+                        <div class="metric-value">${result.generation_metrics.unique_bytes}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Tempo de Geração</div>
+                        <div class="metric-value">${result.generation_info.generation_time.toFixed(2)}s</div>
+                    </div>
+                </div>
+
+                <h4 style="margin: 25px 0 15px;">🧪 Testes NIST (${summary.passed}/${summary.total_tests} aprovados):</h4>
+                
+                <div class="nist-tests-grid">
+                    ${nist.tests.map((test, index) => `
+                        <div class="nist-test-card ${test.passed ? 'passed' : 'failed'}">
+                            <div class="nist-test-title">
+                                ${test.passed ? '✅' : '❌'} ${index + 1}. ${test.test_name}
+                            </div>
+                            <div class="nist-test-stats">
+                                <span>P-value: ${test.p_value ? test.p_value.toFixed(6) : 'N/A'}</span>
+                                <span><strong>${test.passed ? 'PASSOU' : 'FALHOU'}</strong></span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <button onclick="downloadNISTReport()" class="btn btn-secondary">
+                        💾 Baixar Relatório Completo
+                    </button>
+                </div>
+            `;
+
+            window.lastNISTResult = result;
+        }
+
+        function downloadNISTReport() {
+            if (!window.lastNISTResult) {
+                alert('Nenhum resultado para baixar.');
+                return;
+            }
+
+            const dataStr = JSON.stringify(window.lastNISTResult, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `nist_report_${new Date().toISOString()}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
         // Form: Gerar chave única
         function handleSingleFormSubmit(e) {
             e.preventDefault();
             
-            showLoading(true);
+            showLoading(true, 'Gerando chave... Aguarde.');
 
             const formData = new FormData(e.target);
             const data = {};
@@ -623,7 +984,6 @@
                 }
             });
             
-            // Adicionar use_drand como boolean
             data.use_drand = document.getElementById('useDrand').checked;
 
             generateSingleKey(data);
@@ -650,7 +1010,7 @@
         function handleBatchFormSubmit(e) {
             e.preventDefault();
             
-            showLoading(true);
+            showLoading(true, 'Gerando lote de chaves... Isso pode levar alguns minutos.');
 
             const formData = new FormData(e.target);
             const data = {};
@@ -738,7 +1098,19 @@
                         <li>Tempo de geração: ${result.generation_info.generation_time.toFixed(2)}s</li>
                     </ul>
                 </div>
+
+                <div style="margin-top: 20px;">
+                    <button onclick="validateWithNIST('${result.key_hex}')" class="btn btn-success">
+                        🧪 Validar com NIST
+                    </button>
+                </div>
             `;
+        }
+
+        function validateWithNIST(keyHex) {
+            document.getElementById('nistKeyHex').value = keyHex;
+            switchTab('nist');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function displayBatchResult(result) {
@@ -777,7 +1149,7 @@
                 ${stats.quality_score ? `
                 <div style="margin-top: 20px;">
                     <strong>Estatísticas Detalhadas:</strong>
-                    <div class="stats-grid" style="margin-top: 15px;">
+                    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 15px;">
                         <div>
                             <p><strong>Quality Score:</strong></p>
                             <ul style="margin-top: 5px; padding-left: 20px;">
@@ -845,22 +1217,22 @@
             
             statsDiv.innerHTML = `
                 <h4 style="margin-bottom: 15px;">📦 Vector Store</h4>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-title">Total de Exemplos</div>
-                        <div class="stat-value">${vs.total_examples}</div>
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                        <div class="stat-title" style="font-size: 0.9rem; color: #6b7280; margin-bottom: 10px;">Total de Exemplos</div>
+                        <div class="stat-value" style="font-size: 2rem; font-weight: 700; color: #667eea;">${vs.total_examples}</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-title">Alta Qualidade (≥90)</div>
-                        <div class="stat-value">${vs.high_quality_count}</div>
+                    <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                        <div class="stat-title" style="font-size: 0.9rem; color: #6b7280; margin-bottom: 10px;">Alta Qualidade (≥90)</div>
+                        <div class="stat-value" style="font-size: 2rem; font-weight: 700; color: #667eea;">${vs.high_quality_count}</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-title">Entropia Média</div>
-                        <div class="stat-value">${vs.entropy_stats.mean.toFixed(4)}</div>
+                    <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                        <div class="stat-title" style="font-size: 0.9rem; color: #6b7280; margin-bottom: 10px;">Entropia Média</div>
+                        <div class="stat-value" style="font-size: 2rem; font-weight: 700; color: #667eea;">${vs.entropy_stats.mean.toFixed(4)}</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-title">Quality Médio</div>
-                        <div class="stat-value">${vs.quality_stats.mean.toFixed(1)}</div>
+                    <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                        <div class="stat-title" style="font-size: 0.9rem; color: #6b7280; margin-bottom: 10px;">Quality Médio</div>
+                        <div class="stat-value" style="font-size: 2rem; font-weight: 700; color: #667eea;">${vs.quality_stats.mean.toFixed(1)}</div>
                     </div>
                 </div>
 
@@ -869,7 +1241,7 @@
                     <p>Total de clientes em cache: <strong>${clientStats.total_clients}</strong></p>
                     <div style="margin-top: 15px;">
                         ${Object.entries(clientStats.clients).map(([key, stats]) => `
-                            <div class="stat-card" style="margin-bottom: 15px; text-align: left;">
+                            <div class="stat-card" style="margin-bottom: 15px; text-align: left; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
                                 <h5 style="margin-bottom: 10px; color: #667eea;">${key}</h5>
                                 <ul style="padding-left: 20px;">
                                     <li>Total de requisições: ${stats.total_requests}</li>
@@ -925,7 +1297,7 @@
                 resultDiv.innerHTML = `
                     <h3 style="margin-bottom: 15px;">🌡️ Presets de Temperatura Disponíveis</h3>
                     ${Object.entries(result.presets).map(([name, config]) => `
-                        <div class="stat-card" style="margin-bottom: 15px; text-align: left;">
+                        <div class="stat-card" style="margin-bottom: 15px; text-align: left; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
                             <h4 style="color: #667eea; margin-bottom: 10px;">${name}</h4>
                             <p style="color: #6b7280; margin-bottom: 10px;">${config.description}</p>
                             <ul style="padding-left: 20px;">
@@ -951,9 +1323,13 @@
             `;
         }
 
-        function showLoading(show) {
+        function showLoading(show, message = 'Processando...') {
             const overlay = document.getElementById('loadingOverlay');
+            const messageEl = document.getElementById('loadingMessage');
             overlay.className = show ? 'loading-overlay show' : 'loading-overlay';
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
         }
 
         function copyToClipboard(text) {
@@ -985,9 +1361,6 @@
 
         document.getElementById('apiUrl').addEventListener('change', function() {
             API_URL = this.value;
-        });
-
-        window.addEventListener('load', function() {
         });
     </script>
 </body>

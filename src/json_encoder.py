@@ -1,7 +1,4 @@
-"""
-JSON Encoder customizado para Flask que suporta tipos NumPy
-"""
-
+"""JSON Encoder customizado para Flask com suporte a NumPy 1.x e 2.x"""
 from flask.json.provider import DefaultJSONProvider
 import numpy as np
 from datetime import datetime, date
@@ -17,23 +14,24 @@ class NumpyJSONProvider(DefaultJSONProvider):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         
-        # NumPy integers
-        if isinstance(obj, (np.integer, np.int_, np.intc, np.intp, np.int8,
-                           np.int16, np.int32, np.int64, np.uint8, np.uint16,
-                           np.uint32, np.uint64)):
+        # NumPy integers - compatível com NumPy 2.0
+        if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8,
+                           np.uint64, np.uint32, np.uint16, np.uint8)):
             return int(obj)
         
-        # NumPy floats
-        if isinstance(obj, (np.floating, np.float_, np.float16, np.float32,
-                           np.float64)):
+        # NumPy floats - compatível com NumPy 2.0
+        # np.float_ foi removido no NumPy 2.0, usar np.floating
+        if isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
             return float(obj)
         
         # NumPy booleans
         if isinstance(obj, (np.bool_, np.bool8)):
             return bool(obj)
         
-        # NumPy void/complex (converte para string)
-        if isinstance(obj, (np.void, np.complex_, np.complex64, np.complex128)):
+        # NumPy void/complex
+        if hasattr(np, 'void') and isinstance(obj, np.void):
+            return str(obj)
+        if isinstance(obj, (np.complexfloating, np.complex64, np.complex128)):
             return str(obj)
         
         # Datetime objects
@@ -66,11 +64,10 @@ def configure_json_encoder(app):
     print("✓ JSON encoder customizado configurado (suporte a NumPy)")
 
 
-# Versão alternativa: função helper para conversão manual
 def ensure_json_compatible(obj):
     """
     Converte recursivamente objetos com tipos NumPy para tipos Python nativos.
-    Use esta função se não quiser modificar o encoder do Flask.
+    Compatível com NumPy 1.x e 2.x
     
     Usage:
         result = ensure_json_compatible(my_data)
@@ -79,25 +76,31 @@ def ensure_json_compatible(obj):
     if obj is None:
         return None
     
-    # NumPy types
+    # NumPy arrays
     if isinstance(obj, np.ndarray):
         return obj.tolist()
     
-    if isinstance(obj, (np.integer, np.int_, np.intc, np.intp, np.int8,
-                       np.int16, np.int32, np.int64, np.uint8, np.uint16,
-                       np.uint32, np.uint64)):
+    # NumPy integers
+    if isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8,
+                       np.uint64, np.uint32, np.uint16, np.uint8)):
         return int(obj)
     
-    if isinstance(obj, (np.floating, np.float_, np.float16, np.float32,
-                       np.float64)):
+    # NumPy floats - compatível com NumPy 2.0
+    # np.float_ foi removido, usar apenas np.floating e tipos específicos
+    if isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
         return float(obj)
     
+    # NumPy booleans
     if isinstance(obj, (np.bool_, np.bool8)):
         return bool(obj)
     
     # Python bool (força conversão para garantir)
     if type(obj).__name__ == 'bool':
         return bool(obj)
+    
+    # NumPy complex
+    if isinstance(obj, (np.complexfloating, np.complex64, np.complex128)):
+        return str(obj)
     
     # Collections
     if isinstance(obj, dict):
@@ -152,6 +155,21 @@ def jsonify_safe(*args, **kwargs):
     return flask_jsonify(safe_data)
 
 
+# Informações sobre a versão do NumPy
+def get_numpy_version_info():
+    """Retorna informações sobre a versão do NumPy instalada"""
+    version = np.__version__
+    major_version = int(version.split('.')[0])
+    
+    return {
+        'version': version,
+        'major': major_version,
+        'is_numpy2': major_version >= 2,
+        'has_float_': hasattr(np, 'float_'),
+        'has_int_': hasattr(np, 'int_'),
+    }
+
+
 # Testes
 if __name__ == "__main__":
     import json
@@ -159,6 +177,12 @@ if __name__ == "__main__":
     print("="*70)
     print("TESTE DO JSON ENCODER CUSTOMIZADO")
     print("="*70)
+    
+    # Informações do NumPy
+    numpy_info = get_numpy_version_info()
+    print(f"\nNumPy Version: {numpy_info['version']}")
+    print(f"NumPy 2.x: {numpy_info['is_numpy2']}")
+    print(f"Has np.float_: {numpy_info['has_float_']}")
     
     # Dados de teste com tipos NumPy
     test_data = {
@@ -186,13 +210,15 @@ if __name__ == "__main__":
         
         # Verifica tipos
         print("\n2. Verificando tipos convertidos...")
-        print(f"  int: {type(converted['int'])} = {converted['int']}")
-        print(f"  float: {type(converted['float'])} = {converted['float']}")
-        print(f"  bool: {type(converted['bool'])} = {converted['bool']}")
-        print(f"  array: {type(converted['array'])} = {converted['array']}")
-        print(f"  nested.flag: {type(converted['nested']['flag'])} = {converted['nested']['flag']}")
+        print(f"  int: {type(converted['int']).__name__} = {converted['int']}")
+        print(f"  float: {type(converted['float']).__name__} = {converted['float']:.6f}")
+        print(f"  bool: {type(converted['bool']).__name__} = {converted['bool']}")
+        print(f"  array: {type(converted['array']).__name__} (len={len(converted['array'])})")
+        print(f"  nested.flag: {type(converted['nested']['flag']).__name__} = {converted['nested']['flag']}")
         
         print("\n✓ Todos os testes passaram!")
+        print("\nJSON gerado:")
+        print(json_str[:200] + "..." if len(json_str) > 200 else json_str)
         
     except Exception as e:
         print(f"\n✗ ERRO: {e}")
