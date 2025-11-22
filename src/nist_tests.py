@@ -8,7 +8,7 @@ Referência: NIST Special Publication 800-22rev1a
 import numpy as np
 from scipy import special as spc
 from scipy.fft import fft
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 import math
 
 
@@ -20,6 +20,82 @@ class NISTTests:
     """
     
     ALPHA = 0.01  # Nível de significância
+
+    @staticmethod
+    def _convert_to_python_types(obj):
+        '''Converte tipos NumPy para tipos Python nativos para serialização JSON'''
+        return convert_to_json_serializable(obj)
+    
+    @staticmethod
+    def run_all_tests(bits: np.ndarray) -> Dict:
+        '''
+        Executa todos os 15 testes NIST SP 800-22
+        '''
+        results = {
+            'total_bits': int(len(bits)),  # Garante int Python
+            'tests': [],
+            'summary': {
+                'total_tests': 0,
+                'passed': 0,
+                'failed': 0,
+                'pass_rate': 0.0
+            }
+        }
+        
+        # Lista de testes
+        tests = [
+            ('frequency_test', {}),
+            ('block_frequency_test', {}),
+            ('runs_test', {}),
+            ('longest_run_test', {}),
+            ('matrix_rank_test', {}),
+            ('dft_test', {}),
+            ('non_overlapping_template_test', {}),
+            ('overlapping_template_test', {}),
+            ('universal_test', {}),
+            ('linear_complexity_test', {}),
+            ('serial_test', {}),
+            ('approximate_entropy_test', {}),
+            ('cumulative_sums_test', {}),
+            ('random_excursions_test', {}),
+            ('random_excursions_variant_test', {})
+        ]
+        
+        for test_name, kwargs in tests:
+            try:
+                test_func = getattr(NISTTests, test_name)
+                result = test_func(bits, **kwargs)
+                
+                # IMPORTANTE: Converte tipos NumPy para Python nativos
+                result = convert_to_json_serializable(result)
+                
+                results['tests'].append(result)
+                
+                # Contabiliza resultados
+                if 'passed' in result:
+                    results['summary']['total_tests'] += 1
+                    if result['passed']:
+                        results['summary']['passed'] += 1
+                    else:
+                        results['summary']['failed'] += 1
+            
+            except Exception as e:
+                results['tests'].append({
+                    'test_name': test_name,
+                    'error': str(e),
+                    'passed': False
+                })
+                results['summary']['total_tests'] += 1
+                results['summary']['failed'] += 1
+        
+        # Calcula taxa de sucesso
+        if results['summary']['total_tests'] > 0:
+            results['summary']['pass_rate'] = float(
+                results['summary']['passed'] / results['summary']['total_tests'] * 100
+            )
+        
+        # Converte resultado final para garantir
+        return convert_to_json_serializable(results)
     
     @staticmethod
     def hex_to_bits(hex_string: str) -> np.ndarray:
@@ -1076,3 +1152,38 @@ class NISTTests:
         output.append("=" * 80)
         
         return "\n".join(output)
+    
+    def convert_to_json_serializable(obj: Any) -> Any:
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        
+        # NumPy integers
+        elif isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8,
+                            np.uint64, np.uint32, np.uint16, np.uint8)):
+            return int(obj)
+        
+        # NumPy floats
+        elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
+            return float(obj)
+        
+        # NumPy booleans
+        elif isinstance(obj, (np.bool_, np.bool8)):
+            return bool(obj)
+        
+        # Python booleans (garante conversão)
+        elif isinstance(obj, bool):
+            return bool(obj)
+        
+        # Dicionários
+        elif isinstance(obj, dict):
+            return {key: convert_to_json_serializable(value) for key, value in obj.items()}
+        
+        # Listas e tuplas
+        elif isinstance(obj, (list, tuple)):
+            return [convert_to_json_serializable(item) for item in obj]
+        
+        # Outros tipos (strings, None, etc.)
+        else:
+            return obj
+    
+

@@ -15,11 +15,14 @@ from llm_client import LLMClient
 from vector_store import VectorStore
 from prompt_engineering import TemperatureConfig
 from nist_endpoints import add_nist_endpoints
+from json_encoder import configure_json_encoder
 
 app = Flask(__name__, 
             template_folder='../templates',
             static_folder='static')
 CORS(app)
+
+configure_json_encoder(app)
 
 DEFAULT_KEY_SIZE = int(os.getenv("KEY_SIZE_BITS", "256"))
 DEFAULT_STRATEGY = os.getenv("PROMPT_STRATEGY", "few-shot")
@@ -388,7 +391,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     print("="*80)
-    print("API FLASK - GERAÇÃO DE CHAVES CRIPTOGRÁFICAS V2")
+    print("API FLASK - GERAÇÃO DE CHAVES CRIPTOGRÁFICAS")
     print("="*80)
     print(f"Configuração padrão:")
     print(f"  Key size: {DEFAULT_KEY_SIZE} bits")

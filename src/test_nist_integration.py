@@ -5,18 +5,31 @@ Script para testar chaves geradas pela IA
 
 import json
 import time
-from typing import Dict, List
+from typing import Dict, List, Any
 from llm_client import LLMClient
 from nist_tests import NISTTests
 from drand_client import get_entropy_seed
 import numpy as np
 
 
+def ensure_json_serializable(obj: Any) -> Any:
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    elif isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
+    elif isinstance(obj, dict):
+        return {key: ensure_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [ensure_json_serializable(item) for item in obj]
+    else:
+        return obj
+
+
 class NISTValidator:
-    """
-    Validador que integra os testes NIST com o gerador de chaves
-    """
-    
     def __init__(self, llm_client: LLMClient):
         self.llm_client = llm_client
         self.validation_history = []

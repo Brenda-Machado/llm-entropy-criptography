@@ -1,24 +1,15 @@
 """
 Endpoints Flask para integração dos testes NIST SP 800-22
-Adicione este código ao seu app.py
 """
 
 from flask import jsonify, request
 from nist_tests import NISTTests
 from test_nist_integration import NISTValidator
+from json_encoder import ensure_json_compatible
 import traceback
 
 
 def add_nist_endpoints(app, clients_cache, get_or_create_client):
-    """
-    Adiciona endpoints NIST à aplicação Flask
-    
-    Usage:
-    ------
-    from nist_api_endpoints import add_nist_endpoints
-    add_nist_endpoints(app, clients_cache, get_or_create_client)
-    """
-    
     @app.route("/nist/validate_key", methods=["POST", "OPTIONS"])
     def nist_validate_key():
         """
@@ -53,6 +44,9 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
             
             # Executa testes NIST
             results = NISTTests.run_all_tests_from_hex(key_hex)
+            
+            # Converte tipos NumPy para JSON
+            results = ensure_json_compatible(results)
             
             return jsonify({
                 "success": True,
@@ -133,7 +127,7 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                 }), 400
             
             if result['success']:
-                return jsonify({
+                response = {
                     "success": True,
                     "key_hex": result['key_hex'],
                     "seed": result['seed'],
@@ -145,7 +139,12 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                         result['nist_validation'], 
                         detailed=False
                     )
-                })
+                }
+                
+                # Converte tipos NumPy para JSON
+                response = ensure_json_compatible(response)
+                
+                return jsonify(response)
             else:
                 return jsonify(result), 500
         
@@ -203,7 +202,7 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
             # Executa batch
             batch_results = validator.batch_validate(num_keys=num_keys)
             
-            return jsonify({
+            response = {
                 "success": True,
                 "statistics": batch_results['statistics'],
                 "results": [
@@ -219,7 +218,12 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                     "strategy": strategy,
                     "temperature_preset": temperature_preset
                 }
-            })
+            }
+            
+            # Converte tipos NumPy para JSON
+            response = ensure_json_compatible(response)
+            
+            return jsonify(response)
         
         except Exception as e:
             return jsonify({
@@ -408,7 +412,7 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                 key=lambda x: x[1]['statistics'].get('avg_combined_score', 0)
             )
             
-            return jsonify({
+            response = {
                 "success": True,
                 "comparison": results_by_strategy,
                 "best_strategy": {
@@ -422,7 +426,12 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                     "temperature_preset": temperature_preset,
                     "model": model
                 }
-            })
+            }
+            
+            # Converte tipos NumPy para JSON
+            response = ensure_json_compatible(response)
+            
+            return jsonify(response)
         
         except Exception as e:
             return jsonify({
@@ -438,4 +447,3 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
     print("  - POST /nist/batch_validate")
     print("  - GET  /nist/test_details")
     print("  - POST /nist/compare_strategies")
-
