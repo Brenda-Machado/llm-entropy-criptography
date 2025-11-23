@@ -512,12 +512,12 @@
                         <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
                     <div>
-                        <strong>Testes NIST SP 800-22:</strong> Esta bateria de 15 testes estatísticos verifica a qualidade da aleatoriedade das chaves. O processo pode levar de 10 a 60 segundos dependendo do tamanho da chave.
+                        <strong>Testes NIST SP 800-22:</strong> Esta bateria de 15 testes estatísticos verifica a qualidade da aleatoriedade das chaves. O processo pode levar algum tempo dependendo do tamanho da chave.
                     </div>
                 </div>
 
                 <div style="margin-bottom: 30px;">
-                    <h3 style="margin-bottom: 15px;">🔬 Validar Chave Existente</h3>
+                    <h3 style="margin-bottom: 15px;">Validar Chave Existente</h3>
                     <form id="nistValidateForm" onsubmit="handleNISTValidate(event)">
                         <div class="form-group">
                             <label for="nistKeyHex">Chave Hexadecimal (256 bits = 64 caracteres hex)</label>
@@ -525,13 +525,13 @@
                         </div>
 
                         <button type="submit" class="btn btn-success">
-                            🧪 Executar Testes NIST
+                            Executar Testes NIST
                         </button>
                     </form>
                 </div>
 
                 <div style="border-top: 2px solid #e5e7eb; padding-top: 30px;">
-                    <h3 style="margin-bottom: 15px;">🎯 Gerar e Validar com NIST</h3>
+                    <h3 style="margin-bottom: 15px;">Gerar e Validar com NIST</h3>
                     <p style="color: #6b7280; margin-bottom: 15px;">Gera uma nova chave e executa automaticamente a bateria completa de testes NIST.</p>
                     
                     <form id="nistGenerateForm" onsubmit="handleNISTGenerate(event)">
@@ -624,10 +624,10 @@
 
             <!-- Tab: Estatísticas -->
             <div id="stats" class="tab-content">
-                <h3 style="margin-bottom: 20px;">📊 Estatísticas do Sistema</h3>
+                <h3 style="margin-bottom: 20px;">Estatísticas do Sistema</h3>
 
                 <button onclick="loadStats()" class="btn btn-secondary" style="margin-bottom: 20px;">
-                    🔄 Atualizar Estatísticas
+                    Atualizar Estatísticas
                 </button>
 
                 <div id="statsContent">
@@ -645,11 +645,11 @@
                 </div>
 
                 <button onclick="testConnection()" class="btn btn-secondary">
-                    🔌 Testar Conexão
+                    Testar Conexão
                 </button>
 
                 <button onclick="loadPresets()" class="btn btn-secondary" style="margin-left: 10px;">
-                    📋 Ver Presets de Temperatura
+                    Ver Presets de Temperatura
                 </button>
 
                 <div id="configResult" class="result-card"></div>
@@ -809,7 +809,7 @@
                     </div>
                 </div>
 
-                <h4 style="margin: 25px 0 15px;">📋 Resultados Detalhados dos Testes:</h4>
+                <h4 style="margin: 25px 0 15px;">Resultados Detalhados dos Testes:</h4>
                 
                 <div class="nist-tests-grid">
                     ${nist.tests.map((test, index) => `
@@ -827,7 +827,7 @@
                 </div>
 
                 <div style="margin-top: 25px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
-                    <h4 style="margin-bottom: 10px;">📊 Interpretação dos Resultados:</h4>
+                    <h4 style="margin-bottom: 10px;">Interpretação dos Resultados:</h4>
                     <ul style="padding-left: 20px; line-height: 1.8;">
                         <li><strong>≥95% aprovação:</strong> Excelente - Adequado para uso criptográfico</li>
                         <li><strong>≥85% aprovação:</strong> Bom - Pode ser adequado para alguns usos</li>
@@ -904,7 +904,7 @@
                     </strong>
                 </div>
 
-                <h4 style="margin: 25px 0 15px;">📊 Métricas de Geração:</h4>
+                <h4 style="margin: 25px 0 15px;">Métricas de Geração:</h4>
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <div class="metric-label">Quality Score</div>
@@ -924,7 +924,7 @@
                     </div>
                 </div>
 
-                <h4 style="margin: 25px 0 15px;">🧪 Testes NIST (${summary.passed}/${summary.total_tests} aprovados):</h4>
+                <h4 style="margin: 25px 0 15px;">Testes NIST (${summary.passed}/${summary.total_tests} aprovados):</h4>
                 
                 <div class="nist-tests-grid">
                     ${nist.tests.map((test, index) => `
@@ -1101,7 +1101,7 @@
 
                 <div style="margin-top: 20px;">
                     <button onclick="validateWithNIST('${result.key_hex}')" class="btn btn-success">
-                        🧪 Validar com NIST
+                        Validar com NIST
                     </button>
                 </div>
             `;
@@ -1216,7 +1216,7 @@
             const vs = vectorStore.statistics;
             
             statsDiv.innerHTML = `
-                <h4 style="margin-bottom: 15px;">📦 Vector Store</h4>
+                <h4 style="margin-bottom: 15px;">Vector Store</h4>
                 <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
                     <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
                         <div class="stat-title" style="font-size: 0.9rem; color: #6b7280; margin-bottom: 10px;">Total de Exemplos</div>
@@ -1237,7 +1237,7 @@
                 </div>
 
                 ${clientStats.success && clientStats.total_clients > 0 ? `
-                    <h4 style="margin: 30px 0 15px;">🖥️ Estatísticas de Clientes</h4>
+                    <h4 style="margin: 30px 0 15px;">Estatísticas de Clientes</h4>
                     <p>Total de clientes em cache: <strong>${clientStats.total_clients}</strong></p>
                     <div style="margin-top: 15px;">
                         ${Object.entries(clientStats.clients).map(([key, stats]) => `
@@ -1295,7 +1295,7 @@
                 
                 resultDiv.className = 'result-card show';
                 resultDiv.innerHTML = `
-                    <h3 style="margin-bottom: 15px;">🌡️ Presets de Temperatura Disponíveis</h3>
+                    <h3 style="margin-bottom: 15px;">Presets de Temperatura Disponíveis</h3>
                     ${Object.entries(result.presets).map(([name, config]) => `
                         <div class="stat-card" style="margin-bottom: 15px; text-align: left; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
                             <h4 style="color: #667eea; margin-bottom: 10px;">${name}</h4>

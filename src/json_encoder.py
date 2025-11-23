@@ -25,7 +25,7 @@ class NumpyJSONProvider(DefaultJSONProvider):
             return float(obj)
         
         # NumPy booleans
-        if isinstance(obj, (np.bool_, np.bool8)):
+        if isinstance(obj, np.bool_):
             return bool(obj)
         
         # NumPy void/complex
@@ -91,7 +91,7 @@ def ensure_json_compatible(obj):
         return float(obj)
     
     # NumPy booleans
-    if isinstance(obj, (np.bool_, np.bool8)):
+    if isinstance(obj, np.bool_):
         return bool(obj)
     
     # Python bool (força conversão para garantir)
