@@ -14,15 +14,21 @@ Prova de Conceito (PoC) para geração e validação de chaves criptográficas, 
 
 ## Instalação
 
-Primeiro é necessário clonar o repositório em sua máquina e instalar os requirements:
+Primeiro é necessário clonar o repositório em sua máquina:
 
 ```bash
 git clone https://github.com/Brenda-Machado/llm-entropy-criptography.git
 cd llm-entropy-criptography
-pip install -r requirements.txt
 ```
 
 ### Requisitos
+
+Criar o ambiente virtual e instalar os requisitos:
+
+```bash
+make venv
+make install
+```
 
 Além dos requirements, é necessário fazer o setup do Ollama server, consulte as instruções em [SETUP_OLLAMA.md](SETUP_OLLAMA.md).
 
