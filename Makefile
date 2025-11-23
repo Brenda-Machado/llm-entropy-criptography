@@ -21,8 +21,6 @@ help:
 	@echo "  make generate        - Generate training dataset"
 	@echo "  make finetune        - Finetune the model (after generating dataset)"
 	@echo "  make gen_report_data - Generate report data (100 samples)"
-	@echo "  make test            - Run tests"
-	@echo "  make lint            - Run linter"
 
 # Create virtual environment
 .PHONY: venv
@@ -100,16 +98,6 @@ nist_batch:
 nist_compare:
 	$(PYTHON_VENV) src/test_nist_integration.py --mode compare
 
-# Run tests (if you have a test suite)
-.PHONY: test
-test:
-	$(PYTHON_VENV) -m pytest tests/ -v
-
-# Run linter
-.PHONY: lint
-lint:
-	$(PYTHON_VENV) -m flake8 src/
-	$(PYTHON_VENV) -m black --check src/
 
 # Format code
 .PHONY: format

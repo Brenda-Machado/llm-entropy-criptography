@@ -44,6 +44,14 @@ Após isso, abra o navegador em `http://localhost:5000` para acessar a interface
 
 ![Interface Web da API](image.png)
 
+## Ajuda com comandos
+
+Caso queira saber quais outros comandos é possível rodar na aplicação, execute:
+
+```bash
+make help
+```
+
 ## Arquivos importantes
 
 - `app.py`: API Flask e orquestração
