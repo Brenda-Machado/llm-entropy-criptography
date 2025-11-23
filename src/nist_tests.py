@@ -1,38 +1,29 @@
 """
+PoC : Avaliação do Uso de Inteligência Artificial na Geração de Entropia para Chaves Criptográficas
+
 NIST SP 800-22 Statistical Test Suite
 Bateria completa de testes de aleatoriedade para validação criptográfica
 
-Referência: NIST Special Publication 800-22rev1a
+nist_tests.py
 """
 
 import numpy as np
+import math
 from scipy import special as spc
 from scipy.fft import fft
 from typing import Dict, List, Tuple, Any
-import math
-
 
 class NISTTests:
-    """
-    Implementação completa dos 15 testes NIST SP 800-22
-    Nível de significância (alpha) = 0.01
-    P-value >= 0.01 indica que a sequência passou no teste
-    """
-    
-    ALPHA = 0.01  # Nível de significância
+    ALPHA = 0.01
 
     @staticmethod
     def _convert_to_python_types(obj):
-        '''Converte tipos NumPy para tipos Python nativos para serialização JSON'''
         return convert_to_json_serializable(obj)
     
     @staticmethod
     def run_all_tests(bits: np.ndarray) -> Dict:
-        '''
-        Executa todos os 15 testes NIST SP 800-22
-        '''
         results = {
-            'total_bits': int(len(bits)),  # Garante int Python
+            'total_bits': int(len(bits)), 
             'tests': [],
             'summary': {
                 'total_tests': 0,
@@ -42,7 +33,6 @@ class NISTTests:
             }
         }
         
-        # Lista de testes
         tests = [
             ('frequency_test', {}),
             ('block_frequency_test', {}),
@@ -65,13 +55,10 @@ class NISTTests:
             try:
                 test_func = getattr(NISTTests, test_name)
                 result = test_func(bits, **kwargs)
-                
-                # IMPORTANTE: Converte tipos NumPy para Python nativos
                 result = convert_to_json_serializable(result)
                 
                 results['tests'].append(result)
                 
-                # Contabiliza resultados
                 if 'passed' in result:
                     results['summary']['total_tests'] += 1
                     if result['passed']:
@@ -88,28 +75,24 @@ class NISTTests:
                 results['summary']['total_tests'] += 1
                 results['summary']['failed'] += 1
         
-        # Calcula taxa de sucesso
         if results['summary']['total_tests'] > 0:
             results['summary']['pass_rate'] = float(
                 results['summary']['passed'] / results['summary']['total_tests'] * 100
             )
         
-        # Converte resultado final para garantir
         return convert_to_json_serializable(results)
     
     @staticmethod
     def hex_to_bits(hex_string: str) -> np.ndarray:
-        """Converte string hexadecimal para array de bits"""
         byte_array = bytes.fromhex(hex_string)
         bits = np.unpackbits(np.frombuffer(byte_array, dtype=np.uint8))
+
         return bits
     
     @staticmethod
     def bits_to_pm1(bits: np.ndarray) -> np.ndarray:
-        """Converte bits (0,1) para (+1,-1)"""
         return 2 * bits - 1
-    
-    # ==================== TESTE 1: FREQUENCY (MONOBIT) ====================
+
     @staticmethod
     def frequency_test(bits: np.ndarray) -> Dict:
         """
@@ -128,7 +111,6 @@ class NISTTests:
             'statistic': float(s_obs)
         }
     
-    # ==================== TESTE 2: BLOCK FREQUENCY ====================
     @staticmethod
     def block_frequency_test(bits: np.ndarray, block_size: int = 128) -> Dict:
         """
@@ -164,7 +146,6 @@ class NISTTests:
             'num_blocks': N
         }
     
-    # ==================== TESTE 3: RUNS ====================
     @staticmethod
     def runs_test(bits: np.ndarray) -> Dict:
         """
@@ -174,7 +155,6 @@ class NISTTests:
         n = len(bits)
         pi = np.sum(bits) / n
         
-        # Pré-requisito
         if abs(pi - 0.5) >= 2 / np.sqrt(n):
             return {
                 'test_name': 'Runs',
@@ -183,7 +163,6 @@ class NISTTests:
                 'error': 'Pre-test failed (pi far from 0.5)'
             }
         
-        # Conta runs (sequências)
         v_obs = 1 + np.sum(bits[:-1] != bits[1:])
         
         numerator = abs(v_obs - 2 * n * pi * (1 - pi))
@@ -199,7 +178,6 @@ class NISTTests:
             'pi': float(pi)
         }
     
-    # ==================== TESTE 4: LONGEST RUN OF ONES ====================
     @staticmethod
     def longest_run_test(bits: np.ndarray) -> Dict:
         """
@@ -215,7 +193,6 @@ class NISTTests:
                 'error': 'Insufficient data (n < 128)'
             }
         
-        # Parâmetros baseados no tamanho
         if n < 6272:
             K, M, N = 3, 8, 16
             pi = [0.2148, 0.3672, 0.2305, 0.1875]
@@ -229,10 +206,8 @@ class NISTTests:
             pi = [0.0882, 0.2092, 0.2483, 0.1933, 0.1208, 0.0675, 0.0727]
             v_values = [10, 11, 12, 13, 14, 15, 16]
         
-        # Trunca para o tamanho adequado
         bits = bits[:N * M]
         
-        # Conta o longest run em cada bloco
         v = np.zeros(K + 1)
         for i in range(N):
             block = bits[i * M:(i + 1) * M]
@@ -251,7 +226,6 @@ class NISTTests:
             
             longest = max(run_lengths) if run_lengths else 0
             
-            # Classifica o longest run
             if longest <= v_values[0]:
                 v[0] += 1
             elif longest >= v_values[-1]:
@@ -262,7 +236,6 @@ class NISTTests:
                         v[j + 1] += 1
                         break
         
-        # Calcula chi-squared
         chi_squared = np.sum((v - N * np.array(pi)) ** 2 / (N * np.array(pi)))
         p_value = spc.gammaincc(K / 2, chi_squared / 2)
         
@@ -275,14 +248,13 @@ class NISTTests:
             'N': N
         }
     
-    # ==================== TESTE 5: BINARY MATRIX RANK ====================
     @staticmethod
     def matrix_rank_test(bits: np.ndarray) -> Dict:
         """
         Teste 5: Binary Matrix Rank Test
         Verifica a independência linear de substrings
         """
-        M = Q = 32  # Dimensão das matrizes
+        M = Q = 32  
         n = len(bits)
         N = n // (M * Q)
         
@@ -295,13 +267,11 @@ class NISTTests:
             }
         
         def binary_rank(matrix):
-            """Calcula o rank de uma matriz binária"""
             m = matrix.copy()
             rows, cols = m.shape
             rank = 0
             
             for col in range(min(rows, cols)):
-                # Encontra pivot
                 pivot_row = None
                 for row in range(rank, rows):
                     if m[row, col] == 1:
@@ -311,11 +281,9 @@ class NISTTests:
                 if pivot_row is None:
                     continue
                 
-                # Troca linhas
                 if pivot_row != rank:
                     m[[rank, pivot_row]] = m[[pivot_row, rank]]
                 
-                # Eliminação
                 for row in range(rows):
                     if row != rank and m[row, col] == 1:
                         m[row] = (m[row] + m[rank]) % 2
@@ -324,9 +292,8 @@ class NISTTests:
             
             return rank
         
-        # Conta ranks
-        F_M = 0  # Full rank
-        F_M1 = 0  # Rank M-1
+        F_M = 0  
+        F_M1 = 0  
         
         for k in range(N):
             block = bits[k * M * Q:(k + 1) * M * Q]
@@ -338,7 +305,6 @@ class NISTTests:
             elif rank == M - 1:
                 F_M1 += 1
         
-        # Chi-squared
         chi_squared = ((F_M - 0.2888 * N) ** 2 / (0.2888 * N) +
                        (F_M1 - 0.5776 * N) ** 2 / (0.5776 * N) +
                        ((N - F_M - F_M1) - 0.1336 * N) ** 2 / (0.1336 * N))
@@ -354,7 +320,6 @@ class NISTTests:
             'rank_minus_1': int(F_M1)
         }
     
-    # ==================== TESTE 6: DISCRETE FOURIER TRANSFORM ====================
     @staticmethod
     def dft_test(bits: np.ndarray) -> Dict:
         """
@@ -363,18 +328,11 @@ class NISTTests:
         """
         n = len(bits)
         X = NISTTests.bits_to_pm1(bits)
-        
-        # FFT
         S = np.abs(fft(X))[:n // 2]
-        
-        # Threshold
         T = np.sqrt(np.log(1 / 0.05) * n)
-        
-        # Conta picos acima do threshold
         N0 = 0.95 * n / 2
         N1 = np.sum(S < T)
         
-        # Estatística
         d = (N1 - N0) / np.sqrt(n * 0.95 * 0.05 / 4)
         p_value = spc.erfc(abs(d) / np.sqrt(2))
         
@@ -386,18 +344,17 @@ class NISTTests:
             'peaks_below_threshold': int(N1)
         }
     
-    # ==================== TESTE 7: NON-OVERLAPPING TEMPLATE MATCHING ====================
     @staticmethod
     def non_overlapping_template_test(bits: np.ndarray, template: np.ndarray = None) -> Dict:
         """
         Teste 7: Non-overlapping Template Matching Test
         """
         if template is None:
-            template = np.array([0, 0, 0, 0, 0, 0, 0, 0, 1])  # Template padrão
+            template = np.array([0, 0, 0, 0, 0, 0, 0, 0, 1])  
         
         m = len(template)
         n = len(bits)
-        M = 968  # Tamanho do bloco
+        M = 968  
         N = n // M
         
         if N == 0:
@@ -408,12 +365,10 @@ class NISTTests:
                 'error': 'Insufficient data'
             }
         
-        # Calcula mu e sigma²
         mu = (M - m + 1) / (2 ** m)
         sigma_squared = M * ((1 / (2 ** m)) - ((2 * m - 1) / (2 ** (2 * m))))
-        
-        # Conta matches em cada bloco
         W = []
+
         for i in range(N):
             block = bits[i * M:(i + 1) * M]
             matches = 0
@@ -422,13 +377,12 @@ class NISTTests:
             while j < M - m + 1:
                 if np.array_equal(block[j:j + m], template):
                     matches += 1
-                    j += m  # Non-overlapping
+                    j += m  
                 else:
                     j += 1
             
             W.append(matches)
         
-        # Chi-squared
         chi_squared = np.sum((np.array(W) - mu) ** 2) / sigma_squared
         p_value = spc.gammaincc(N / 2, chi_squared / 2)
         
@@ -441,18 +395,17 @@ class NISTTests:
             'num_blocks': N
         }
     
-    # ==================== TESTE 8: OVERLAPPING TEMPLATE MATCHING ====================
     @staticmethod
     def overlapping_template_test(bits: np.ndarray, template: np.ndarray = None) -> Dict:
         """
         Teste 8: Overlapping Template Matching Test
         """
         if template is None:
-            template = np.ones(9, dtype=int)  # 9 ones
+            template = np.ones(9, dtype=int) 
         
         m = len(template)
         n = len(bits)
-        M = 1032  # Tamanho do bloco
+        M = 1032 
         N = n // M
         
         if N == 0:
@@ -463,16 +416,12 @@ class NISTTests:
                 'error': 'Insufficient data'
             }
         
-        # Parâmetros
         K = 5
         lambda_val = (M - m + 1) / (2 ** m)
         eta = lambda_val / 2.0
-        
-        # Probabilidades teóricas
         pi = [0.364091, 0.185659, 0.139381, 0.100571, 0.0704323, 0.139865]
-        
-        # Conta matches em cada bloco
         v = np.zeros(K + 1)
+
         for i in range(N):
             block = bits[i * M:(i + 1) * M]
             matches = 0
@@ -486,7 +435,6 @@ class NISTTests:
             else:
                 v[K] += 1
         
-        # Chi-squared
         chi_squared = np.sum((v - N * np.array(pi)) ** 2 / (N * np.array(pi)))
         p_value = spc.gammaincc(K / 2, chi_squared / 2)
         
@@ -498,7 +446,6 @@ class NISTTests:
             'template_size': m
         }
     
-    # ==================== TESTE 9: UNIVERSAL STATISTICAL ====================
     @staticmethod
     def universal_test(bits: np.ndarray) -> Dict:
         """
@@ -506,7 +453,6 @@ class NISTTests:
         """
         n = len(bits)
         
-        # Parâmetros baseados em n
         if n >= 387840:
             L, Q = 7, 1280
         elif n >= 904960:
@@ -538,7 +484,6 @@ class NISTTests:
                 'error': 'Insufficient data'
             }
         
-        # Valores esperados (tabela NIST)
         expected_values = {
             6: (5.2177052, 2.954),
             7: (6.1962507, 3.125),
@@ -555,14 +500,14 @@ class NISTTests:
         
         expected_value, variance = expected_values.get(L, (0, 0))
         
-        # Tabela de inicialização
         T = {}
+
         for i in range(Q):
             block = tuple(bits[i * L:(i + 1) * L])
             T[block] = i + 1
         
-        # Cálculo do teste
         sum_log = 0.0
+
         for i in range(Q, Q + K):
             block = tuple(bits[i * L:(i + 1) * L])
             if block in T:
@@ -570,8 +515,6 @@ class NISTTests:
             T[block] = i + 1
         
         fn = sum_log / K
-        
-        # Estatística
         c = 0.7 - 0.8 / L + (4 + 32 / L) * (K ** (-3 / L)) / 15
         sigma = c * np.sqrt(variance / K)
         
@@ -587,7 +530,6 @@ class NISTTests:
             'K': K
         }
     
-    # ==================== TESTE 10: LINEAR COMPLEXITY ====================
     @staticmethod
     def linear_complexity_test(bits: np.ndarray, M: int = 500) -> Dict:
         """
@@ -606,7 +548,6 @@ class NISTTests:
             }
         
         def berlekamp_massey(block):
-            """Algoritmo de Berlekamp-Massey para calcular complexidade linear"""
             n = len(block)
             c = np.zeros(n, dtype=int)
             b = np.zeros(n, dtype=int)
@@ -632,22 +573,21 @@ class NISTTests:
             
             return l
         
-        # Calcula complexidade para cada bloco
         complexities = []
+
         for i in range(N):
             block = bits[i * M:(i + 1) * M]
             L = berlekamp_massey(block)
             complexities.append(L)
         
-        # Calcula T_i (desvio normalizado)
         mu = M / 2.0 + (9.0 + (-1) ** (M + 1)) / 36.0 - 1.0 / (2 ** M) * (M / 3.0 + 2.0 / 9.0)
         
         T = []
+
         for L in complexities:
             T_i = (-1) ** M * (L - mu) + 2.0 / 9.0
             T.append(T_i)
         
-        # Conta frequências
         v = [0, 0, 0, 0, 0, 0, 0]  # [-inf, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, inf]
         
         for t in T:
@@ -665,11 +605,8 @@ class NISTTests:
                 v[5] += 1
             else:
                 v[6] += 1
-        
-        # Probabilidades teóricas
+
         pi = [0.010417, 0.03125, 0.125, 0.5, 0.25, 0.0625, 0.020833]
-        
-        # Chi-squared
         chi_squared = np.sum((np.array(v) - N * np.array(pi)) ** 2 / (N * np.array(pi)))
         p_value = spc.gammaincc(3, chi_squared / 2)
         
@@ -683,7 +620,6 @@ class NISTTests:
             'mean_complexity': float(np.mean(complexities))
         }
     
-    # ==================== TESTE 11: SERIAL ====================
     @staticmethod
     def serial_test(bits: np.ndarray, m: int = 16) -> Dict:
         """
@@ -701,29 +637,27 @@ class NISTTests:
             }
         
         def psi_squared(m_val, bits_val):
-            """Calcula ψ²_m"""
             counts = {}
+
             for i in range(len(bits_val)):
                 pattern = tuple(bits_val[i:i + m_val])
                 if len(pattern) == m_val:
                     counts[pattern] = counts.get(pattern, 0) + 1
             
             psi_sq = 0
+
             for count in counts.values():
                 psi_sq += count ** 2
             
             psi_sq = (2 ** m_val / len(bits_val)) * psi_sq - len(bits_val)
+
             return psi_sq
         
-        # Cria sequência circular
         circular_bits = np.concatenate([bits, bits[:m - 1]])
-        
-        # Calcula ψ² para m, m-1, m-2
         psi_m = psi_squared(m, circular_bits)
         psi_m1 = psi_squared(m - 1, circular_bits)
         psi_m2 = psi_squared(m - 2, circular_bits)
         
-        # Estatísticas
         delta1 = psi_m - psi_m1
         delta2 = psi_m - 2 * psi_m1 + psi_m2
         
@@ -740,7 +674,6 @@ class NISTTests:
             'm': m
         }
     
-    # ==================== TESTE 12: APPROXIMATE ENTROPY ====================
     @staticmethod
     def approximate_entropy_test(bits: np.ndarray, m: int = 10) -> Dict:
         """
@@ -757,7 +690,6 @@ class NISTTests:
             }
         
         def phi(m_val):
-            """Calcula Φ(m)"""
             counts = {}
             for i in range(n):
                 pattern = tuple(bits[i:i + m_val])
@@ -787,7 +719,6 @@ class NISTTests:
             'm': m
         }
     
-    # ==================== TESTE 13: CUMULATIVE SUMS ====================
     @staticmethod
     def cumulative_sums_test(bits: np.ndarray) -> Dict:
         """
@@ -796,17 +727,14 @@ class NISTTests:
         """
         n = len(bits)
         X = NISTTests.bits_to_pm1(bits)
-        
-        # Forward
+
         S_forward = np.cumsum(X)
         z_forward = np.max(np.abs(S_forward))
-        
-        # Backward
+
         S_backward = np.cumsum(X[::-1])
         z_backward = np.max(np.abs(S_backward))
         
         def compute_p_value(z):
-            """Calcula p-value para cumsum"""
             sum_val = 0.0
             start = int((-n / z + 1) / 4)
             end = int((n / z - 1) / 4)
@@ -838,7 +766,6 @@ class NISTTests:
             'z_backward': float(z_backward)
         }
     
-    # ==================== TESTE 14: RANDOM EXCURSIONS ====================
     @staticmethod
     def random_excursions_test(bits: np.ndarray) -> Dict:
         """
@@ -846,12 +773,9 @@ class NISTTests:
         """
         n = len(bits)
         X = NISTTests.bits_to_pm1(bits)
-        
-        # Calcula cumulative sum
         S = np.zeros(n + 1)
         S[1:] = np.cumsum(X)
         
-        # Conta ciclos (retornos ao zero)
         cycles = []
         cycle_start = 0
         
@@ -869,16 +793,13 @@ class NISTTests:
                 'passed': False,
                 'error': f'Insufficient cycles: {J} < 500'
             }
-        
-        # Estados para teste
+
         states = [-4, -3, -2, -1, 1, 2, 3, 4]
-        
         results = {}
         all_passed = True
         
         for x in states:
-            # Conta visitas ao estado x em cada ciclo
-            v = np.zeros(6)  # [0, 1, 2, 3, 4, 5+]
+            v = np.zeros(6)  
             
             for cycle in cycles:
                 count = np.sum(cycle == x)
@@ -886,11 +807,8 @@ class NISTTests:
                     v[5] += 1
                 else:
                     v[count] += 1
-            
-            # Probabilidades teóricas
+
             pi = NISTTests._compute_pi(x)
-            
-            # Chi-squared
             chi_squared = np.sum((v - J * np.array(pi)) ** 2 / (J * np.array(pi)))
             p_value = spc.gammaincc(2.5, chi_squared / 2)
             
@@ -912,10 +830,8 @@ class NISTTests:
     
     @staticmethod
     def _compute_pi(x: int) -> np.ndarray:
-        """Calcula probabilidades teóricas para Random Excursions"""
         pi = np.zeros(6)
         
-        # Fórmulas da especificação NIST
         if x == -4 or x == 4:
             pi[0] = 0.5
             pi[1] = 0.25
@@ -947,7 +863,6 @@ class NISTTests:
         
         return pi
     
-    # ==================== TESTE 15: RANDOM EXCURSIONS VARIANT ====================
     @staticmethod
     def random_excursions_variant_test(bits: np.ndarray) -> Dict:
         """
@@ -955,12 +870,8 @@ class NISTTests:
         """
         n = len(bits)
         X = NISTTests.bits_to_pm1(bits)
-        
-        # Calcula cumulative sum
         S = np.zeros(n + 1)
         S[1:] = np.cumsum(X)
-        
-        # Conta ciclos
         J = np.sum(S == 0) - 1
         
         if J < 500:
@@ -971,17 +882,13 @@ class NISTTests:
                 'error': f'Insufficient cycles: {J} < 500'
             }
         
-        # Estados para teste
         states = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         
         results = {}
         all_passed = True
         
         for x in states:
-            # Conta ocorrências do estado x
             count = np.sum(S == x)
-            
-            # P-value
             p_value = spc.erfc(abs(count - J) / np.sqrt(2 * J * (4 * abs(x) - 2)))
             
             results[f'state_{x}'] = {
@@ -1000,7 +907,6 @@ class NISTTests:
             'passed': all_passed
         }
     
-    # ==================== EXECUTAR TODOS OS TESTES ====================
     @staticmethod
     def run_all_tests(bits: np.ndarray) -> Dict:
         """
@@ -1042,7 +948,6 @@ class NISTTests:
                 result = test_func(bits, **kwargs)
                 results['tests'].append(result)
                 
-                # Contabiliza resultados
                 if 'passed' in result:
                     results['summary']['total_tests'] += 1
                     if result['passed']:
@@ -1059,7 +964,6 @@ class NISTTests:
                 results['summary']['total_tests'] += 1
                 results['summary']['failed'] += 1
         
-        # Calcula taxa de sucesso
         if results['summary']['total_tests'] > 0:
             results['summary']['pass_rate'] = (
                 results['summary']['passed'] / results['summary']['total_tests'] * 100
@@ -1069,17 +973,12 @@ class NISTTests:
     
     @staticmethod
     def run_all_tests_from_hex(hex_string: str) -> Dict:
-        """
-        Executa todos os testes a partir de uma string hexadecimal
-        """
         bits = NISTTests.hex_to_bits(hex_string)
+
         return NISTTests.run_all_tests(bits)
     
     @staticmethod
     def format_results(results: Dict, detailed: bool = True) -> str:
-        """
-        Formata os resultados dos testes para exibição
-        """
         output = []
         output.append("=" * 80)
         output.append("NIST SP 800-22 STATISTICAL TEST SUITE RESULTS")
@@ -1088,20 +987,17 @@ class NISTTests:
         output.append(f"Significance level (α): {NISTTests.ALPHA}")
         output.append("")
         
-        # Resultados individuais
         for i, test in enumerate(results['tests'], 1):
             output.append(f"{i}. {test.get('test_name', 'Unknown Test')}")
             
             if 'error' in test:
                 output.append(f"   ERROR: {test['error']}")
             else:
-                # P-value principal
                 if 'p_value' in test:
                     p_val = test['p_value']
                     status = "PASS ✓" if test.get('passed', False) else "FAIL ✗"
                     output.append(f"   P-value: {p_val:.6f} - {status}")
                 
-                # P-value secundário (para alguns testes)
                 if 'p_value2' in test:
                     p_val2 = test['p_value2']
                     output.append(f"   P-value2: {p_val2:.6f}")
@@ -1110,7 +1006,6 @@ class NISTTests:
                     output.append(f"   P-value (forward): {test['p_value_forward']:.6f}")
                     output.append(f"   P-value (backward): {test['p_value_backward']:.6f}")
                 
-                # Detalhes adicionais
                 if detailed:
                     if 'statistic' in test:
                         output.append(f"   Statistic: {test['statistic']:.6f}")
@@ -1124,8 +1019,7 @@ class NISTTests:
                         output.append(f"   States passed: {passed_states}/{total_states}")
             
             output.append("")
-        
-        # Sumário
+
         output.append("=" * 80)
         output.append("SUMMARY")
         output.append("=" * 80)
@@ -1135,7 +1029,6 @@ class NISTTests:
         output.append(f"Pass rate: {results['summary']['pass_rate']:.2f}%")
         output.append("")
         
-        # Conclusão
         if results['summary']['pass_rate'] >= 95:
             output.append("CONCLUSION: The sequence demonstrates EXCELLENT randomness quality.")
             output.append("✓ Suitable for cryptographic applications.")
@@ -1157,32 +1050,25 @@ class NISTTests:
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         
-        # NumPy integers
         elif isinstance(obj, (np.integer, np.int64, np.int32, np.int16, np.int8,
                             np.uint64, np.uint32, np.uint16, np.uint8)):
             return int(obj)
         
-        # NumPy floats
         elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
             return float(obj)
         
-        # NumPy booleans
         elif isinstance(obj, (np.bool_, np.bool8)):
             return bool(obj)
         
-        # Python booleans (garante conversão)
         elif isinstance(obj, bool):
             return bool(obj)
         
-        # Dicionários
         elif isinstance(obj, dict):
             return {key: convert_to_json_serializable(value) for key, value in obj.items()}
-        
-        # Listas e tuplas
+
         elif isinstance(obj, (list, tuple)):
             return [convert_to_json_serializable(item) for item in obj]
-        
-        # Outros tipos (strings, None, etc.)
+
         else:
             return obj
     

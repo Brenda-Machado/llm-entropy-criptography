@@ -1,16 +1,17 @@
 """
-Integração dos testes NIST SP 800-22 com o LLM Client
-Script para testar chaves geradas pela IA
+PoC: Avaliação do Uso de Inteligência Artificial na Geração de Entropia para Chaves Criptográficas
+
+test_nist_integrarion.py
 """
 
 import json
 import time
+import numpy as np
+import argparse
 from typing import Dict, List, Any
 from llm_client import LLMClient
 from nist_tests import NISTTests
 from drand_client import get_entropy_seed
-import numpy as np
-
 
 def ensure_json_serializable(obj: Any) -> Any:
     if isinstance(obj, np.ndarray):
@@ -35,18 +36,12 @@ class NISTValidator:
         self.validation_history = []
     
     def validate_key(self, key_hex: str, seed: str = None) -> Dict:
-        """
-        Valida uma chave usando todos os testes NIST
-        """
         print(f"\n{'='*80}")
         print(f"Validando chave com NIST SP 800-22...")
         print(f"{'='*80}")
         print(f"Chave: {key_hex[:32]}...")
         
-        # Executa testes NIST
         nist_results = NISTTests.run_all_tests_from_hex(key_hex)
-        
-        # Adiciona ao histórico
         validation_record = {
             'timestamp': time.time(),
             'key_hex': key_hex,
@@ -58,15 +53,11 @@ class NISTValidator:
         return nist_results
     
     def generate_and_validate(self, seed: str = None, use_drand: bool = True) -> Dict:
-        """
-        Gera uma chave e valida com NIST
-        """
-        # Gera seed se necessário
         if use_drand and not seed:
             seed = get_entropy_seed()
         
-        # Gera chave
         print(f"\nGerando chave com LLM...")
+
         result = self.llm_client.generate_key(seed, store_result=True)
         
         if not result['success']:
@@ -77,11 +68,8 @@ class NISTValidator:
             }
         
         key_hex = result['key_hex']
-        
-        # Valida com NIST
         nist_results = self.validate_key(key_hex, seed)
         
-        # Combina resultados
         combined_results = {
             'success': True,
             'key_hex': key_hex,
@@ -95,16 +83,10 @@ class NISTValidator:
         return combined_results
     
     def _assess_overall_quality(self, gen_result: Dict, nist_results: Dict) -> Dict:
-        """
-        Avalia qualidade geral combinando métricas de geração e NIST
-        """
         gen_score = gen_result['metrics']['quality_score']
         nist_pass_rate = nist_results['summary']['pass_rate']
-        
-        # Score combinado
         combined_score = (gen_score * 0.3 + nist_pass_rate * 0.7)
         
-        # Classificação
         if combined_score >= 95 and nist_pass_rate >= 95:
             grade = 'EXCELLENT'
             recommendation = 'Altamente recomendado para uso criptográfico'
@@ -128,9 +110,6 @@ class NISTValidator:
         }
     
     def batch_validate(self, num_keys: int = 10, progress_callback=None) -> Dict:
-        """
-        Gera e valida múltiplas chaves
-        """
         results = []
         stats = {
             'total': num_keys,
@@ -157,14 +136,11 @@ class NISTValidator:
             
             if result['success']:
                 stats['successful_generations'] += 1
-                
-                # Coleta métricas
                 quality = result['overall_quality']
                 stats['generation_scores'].append(quality['generation_score'])
                 stats['nist_pass_rates'].append(quality['nist_pass_rate'])
                 stats['combined_scores'].append(quality['combined_score'])
                 
-                # Classifica
                 if quality['nist_pass_rate'] >= 95:
                     stats['nist_excellent'] += 1
                 elif quality['nist_pass_rate'] >= 85:
@@ -180,10 +156,8 @@ class NISTValidator:
             if progress_callback:
                 progress_callback(i + 1, num_keys, result)
             
-            # Pequeno delay para não sobrecarregar
             time.sleep(0.5)
         
-        # Calcula estatísticas agregadas
         if stats['generation_scores']:
             stats['avg_generation_score'] = np.mean(stats['generation_scores'])
             stats['avg_nist_pass_rate'] = np.mean(stats['nist_pass_rates'])
@@ -198,26 +172,19 @@ class NISTValidator:
         }
     
     def save_results(self, filepath: str = "nist_validation_results.json"):
-        """
-        Salva histórico de validações
-        """
         with open(filepath, 'w') as f:
             json.dump(self.validation_history, f, indent=2)
-        print(f"\nResultados salvos em: {filepath}")
     
     def generate_report(self, batch_results: Dict, filepath: str = "nist_report.txt"):
-        """
-        Gera relatório detalhado das validações
-        """
         stats = batch_results['statistics']
         
         report = []
+
         report.append("=" * 80)
         report.append("RELATÓRIO DE VALIDAÇÃO NIST SP 800-22")
         report.append("=" * 80)
         report.append("")
         
-        # Resumo geral
         report.append("RESUMO GERAL")
         report.append("-" * 80)
         report.append(f"Total de chaves testadas: {stats['total']}")
@@ -225,7 +192,6 @@ class NISTValidator:
         report.append(f"Taxa de sucesso na geração: {(stats['successful_generations']/stats['total']*100):.2f}%")
         report.append("")
         
-        # Classificação NIST
         report.append("CLASSIFICAÇÃO NIST")
         report.append("-" * 80)
         report.append(f"Excelente (≥95%): {stats['nist_excellent']} chaves")
@@ -234,15 +200,14 @@ class NISTValidator:
         report.append(f"Ruim (<70%):      {stats['nist_poor']} chaves")
         report.append("")
         
-        # Grau criptográfico
         report.append("ADEQUAÇÃO CRIPTOGRÁFICA")
         report.append("-" * 80)
         report.append(f"Chaves com grau criptográfico: {stats['cryptographic_grade']}")
+
         if stats['successful_generations'] > 0:
             report.append(f"Taxa de adequação: {stats['cryptographic_grade_rate']:.2f}%")
         report.append("")
         
-        # Estatísticas
         if 'avg_generation_score' in stats:
             report.append("ESTATÍSTICAS")
             report.append("-" * 80)
@@ -257,8 +222,7 @@ class NISTValidator:
             report.append(f"Score Combinado:")
             report.append(f"  Média: {stats['avg_combined_score']:.2f}")
             report.append("")
-        
-        # Análise individual dos testes mais críticos
+
         report.append("ANÁLISE DE TESTES CRÍTICOS")
         report.append("-" * 80)
         
@@ -291,9 +255,8 @@ class NISTValidator:
         
         report.append("")
         report.append("=" * 80)
-        
-        # Salva relatório
         report_text = "\n".join(report)
+
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(report_text)
         
@@ -302,28 +265,20 @@ class NISTValidator:
 
 
 def test_single_key():
-    """
-    Teste de uma única chave
-    """
     print("\n" + "="*80)
     print("TESTE INDIVIDUAL")
     print("="*80)
     
-    # Inicializa cliente LLM
     client = LLMClient(
         key_size_bits=256,
         strategy='few-shot',
         temperature_preset='high_entropy'
     )
     
-    # Cria validador
     validator = NISTValidator(client)
-    
-    # Gera e valida
     result = validator.generate_and_validate()
     
     if result['success']:
-        # Exibe resultados
         print("\n" + NISTTests.format_results(result['nist_validation'], detailed=True))
         
         print("\n" + "="*80)
@@ -341,38 +296,26 @@ def test_single_key():
 
 
 def test_batch():
-    """
-    Teste em lote
-    """
     print("\n" + "="*80)
     print("TESTE EM LOTE")
     print("="*80)
-    
-    # Inicializa cliente LLM
+
     client = LLMClient(
         key_size_bits=256,
         strategy='few-shot',
         temperature_preset='high_entropy'
     )
     
-    # Cria validador
     validator = NISTValidator(client)
-    
-    # Executa batch
     batch_results = validator.batch_validate(num_keys=10)
-    
-    # Gera e exibe relatório
     report = validator.generate_report(batch_results)
+
     print("\n" + report)
     
-    # Salva resultados
     validator.save_results()
 
 
 def compare_strategies():
-    """
-    Compara diferentes estratégias de prompt
-    """
     print("\n" + "="*80)
     print("COMPARAÇÃO DE ESTRATÉGIAS")
     print("="*80)
@@ -395,7 +338,6 @@ def compare_strategies():
         
         results_by_strategy[strategy] = batch_results['statistics']
     
-    # Compara resultados
     print("\n\n" + "="*80)
     print("COMPARAÇÃO FINAL")
     print("="*80)
@@ -409,8 +351,6 @@ def compare_strategies():
 
 
 if __name__ == "__main__":
-    import argparse
-    
     parser = argparse.ArgumentParser(description="Validação NIST para chaves geradas por IA")
     parser.add_argument('--mode', choices=['single', 'batch', 'compare'], 
                        default='single', help='Modo de teste')

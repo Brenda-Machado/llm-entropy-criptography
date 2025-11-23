@@ -27,24 +27,4 @@ Você verá algo como:
 2024/01/15 10:30:45 "Listening on 127.0.0.1:11434"
 ```
 
-**Deixe este terminal aberto** - é o servidor Ollama.
-
-## 4. Instalar Dependências Python
-
-Em outro terminal/cmd, no diretório do projeto:
-
-```bash
-pip install -r requirements.txt
-```
-
-## 5. Executar a Aplicação
-
-```bash
-make run
-```
-
-Você verá:
-```
- * Running on http://127.0.0.1:5000
-```
-
+Deixe este terminal aberto, é o servidor Ollama.

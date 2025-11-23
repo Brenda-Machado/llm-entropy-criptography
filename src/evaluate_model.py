@@ -7,10 +7,10 @@ evaluate_model.py
 import requests
 import json
 import secrets
-from utils import calculate_entropy, is_valid_entropy
-from config import OLLAMA_BASE_URL
 import matplotlib.pyplot as plt
 import numpy as np
+from utils import calculate_entropy, is_valid_entropy
+from config import OLLAMA_BASE_URL
 
 def test_model_entropy(model_name, num_tests=50):
     print(f"\n=== Testando modelo: {model_name} ===")

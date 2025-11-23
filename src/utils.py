@@ -2,7 +2,6 @@
 PoC : Avaliação do Uso de Inteligência Artificial na Geração de Entropia para Chaves Criptográficas
 
 utils.py
-
 """
 
 import hashlib

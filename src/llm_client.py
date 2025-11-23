@@ -1,8 +1,7 @@
 """
 PoC : Avaliação do Uso de Inteligência Artificial na Geração de Entropia para Chaves Criptográficas
 
-llm_client.py - Integração com Ollama
-
+llm_client.py
 """
 
 import requests
@@ -10,8 +9,6 @@ import json
 import time
 import secrets
 import numpy as np
-
-
 from typing import Dict, Optional, Tuple
 from config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from prompt_engineering import PromptTemplate, TemperatureConfig

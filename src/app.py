@@ -236,7 +236,6 @@ def generate_batch_endpoint():
             temperature_preset=temperature_preset
         )
         
-        # Gerar chaves
         results, stats = client.batch_generate(num_keys)
         
         return jsonify({

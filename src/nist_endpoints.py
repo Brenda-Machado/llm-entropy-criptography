@@ -1,25 +1,18 @@
 """
-Endpoints Flask para integração dos testes NIST SP 800-22
+PoC : Avaliação do Uso de Inteligência Artificial na Geração de Entropia para Chaves Criptográficas
+
+nist_endpoints.py
 """
 
+import traceback
 from flask import jsonify, request
 from nist_tests import NISTTests
 from test_nist_integration import NISTValidator
 from json_encoder import ensure_json_compatible
-import traceback
-
 
 def add_nist_endpoints(app, clients_cache, get_or_create_client):
     @app.route("/nist/validate_key", methods=["POST", "OPTIONS"])
     def nist_validate_key():
-        """
-        Valida uma chave existente com NIST SP 800-22
-        
-        Request body:
-        {
-            "key_hex": "a3f5b82c..."
-        }
-        """
         if request.method == "OPTIONS":
             return jsonify({"status": "ok"}), 200
         
@@ -33,7 +26,6 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                     "error": "key_hex é obrigatório"
                 }), 400
             
-            # Valida formato hex
             try:
                 bytes.fromhex(key_hex)
             except ValueError:
@@ -42,10 +34,7 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                     "error": "key_hex deve ser uma string hexadecimal válida"
                 }), 400
             
-            # Executa testes NIST
             results = NISTTests.run_all_tests_from_hex(key_hex)
-            
-            # Converte tipos NumPy para JSON
             results = ensure_json_compatible(results)
             
             return jsonify({
@@ -65,19 +54,6 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
     
     @app.route("/nist/generate_and_validate", methods=["POST", "OPTIONS"])
     def nist_generate_and_validate():
-        """
-        Gera uma chave E valida com NIST em uma única chamada
-        
-        Request body:
-        {
-            "key_size": 256,
-            "strategy": "few-shot",
-            "temperature": "high_entropy",
-            "model": "gemma3:latest",
-            "use_drand": true,
-            "seed": "optional_custom_seed"
-        }
-        """
         if request.method == "OPTIONS":
             return jsonify({"status": "ok"}), 200
         
@@ -97,14 +73,12 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
             
             custom_seed = params.get('seed')
             
-            # Validações
             if key_size_bits not in [128, 192, 256]:
                 return jsonify({
                     "success": False,
                     "error": "key_size deve ser 128, 192 ou 256"
                 }), 400
             
-            # Obtém cliente LLM
             client = get_or_create_client(
                 model=model,
                 key_size_bits=key_size_bits,
@@ -112,10 +86,8 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                 temperature_preset=temperature_preset
             )
             
-            # Cria validador
             validator = NISTValidator(client)
             
-            # Gera e valida
             if use_drand:
                 result = validator.generate_and_validate(use_drand=True)
             elif custom_seed:
@@ -141,10 +113,10 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                     )
                 }
                 
-                # Converte tipos NumPy para JSON
                 response = ensure_json_compatible(response)
                 
                 return jsonify(response)
+            
             else:
                 return jsonify(result), 500
         
@@ -158,18 +130,6 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
     
     @app.route("/nist/batch_validate", methods=["POST", "OPTIONS"])
     def nist_batch_validate():
-        """
-        Gera e valida múltiplas chaves com NIST
-        
-        Request body:
-        {
-            "num_keys": 10,
-            "key_size": 256,
-            "strategy": "few-shot",
-            "temperature": "high_entropy",
-            "model": "gemma3:latest"
-        }
-        """
         if request.method == "OPTIONS":
             return jsonify({"status": "ok"}), 200
         
@@ -188,7 +148,6 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                     "error": "num_keys deve ser ≤ 50 para validação NIST"
                 }), 400
             
-            # Obtém cliente LLM
             client = get_or_create_client(
                 model=model,
                 key_size_bits=key_size_bits,
@@ -196,10 +155,7 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                 temperature_preset=temperature_preset
             )
             
-            # Cria validador
             validator = NISTValidator(client)
-            
-            # Executa batch
             batch_results = validator.batch_validate(num_keys=num_keys)
             
             response = {
@@ -219,8 +175,7 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                     "temperature_preset": temperature_preset
                 }
             }
-            
-            # Converte tipos NumPy para JSON
+
             response = ensure_json_compatible(response)
             
             return jsonify(response)
@@ -235,9 +190,6 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
     
     @app.route("/nist/test_details", methods=["GET"])
     def nist_test_details():
-        """
-        Retorna informações sobre os testes NIST disponíveis
-        """
         tests_info = [
             {
                 "id": 1,
@@ -351,18 +303,6 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
     
     @app.route("/nist/compare_strategies", methods=["POST", "OPTIONS"])
     def nist_compare_strategies():
-        """
-        Compara diferentes estratégias de prompt usando validação NIST
-        
-        Request body:
-        {
-            "strategies": ["zero-shot", "few-shot", "cot"],
-            "num_keys_per_strategy": 5,
-            "key_size": 256,
-            "temperature": "high_entropy",
-            "model": "gemma3:latest"
-        }
-        """
         if request.method == "OPTIONS":
             return jsonify({"status": "ok"}), 200
         
@@ -384,7 +324,6 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
             results_by_strategy = {}
             
             for strategy in strategies:
-                # Obtém cliente
                 client = get_or_create_client(
                     model=model,
                     key_size_bits=key_size_bits,
@@ -392,10 +331,7 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                     temperature_preset=temperature_preset
                 )
                 
-                # Cria validador
                 validator = NISTValidator(client)
-                
-                # Executa batch
                 batch_results = validator.batch_validate(num_keys=num_keys)
                 
                 results_by_strategy[strategy] = {
@@ -406,7 +342,6 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                     )['key_hex'] if batch_results['statistics']['successful_generations'] > 0 else None
                 }
             
-            # Determina melhor estratégia
             best_strategy = max(
                 results_by_strategy.items(),
                 key=lambda x: x[1]['statistics'].get('avg_combined_score', 0)
@@ -428,7 +363,6 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                 }
             }
             
-            # Converte tipos NumPy para JSON
             response = ensure_json_compatible(response)
             
             return jsonify(response)
@@ -439,11 +373,3 @@ def add_nist_endpoints(app, clients_cache, get_or_create_client):
                 "error": str(e),
                 "traceback": traceback.format_exc()
             }), 500
-    
-    
-    print("\n✓ Endpoints NIST adicionados:")
-    print("  - POST /nist/validate_key")
-    print("  - POST /nist/generate_and_validate")
-    print("  - POST /nist/batch_validate")
-    print("  - GET  /nist/test_details")
-    print("  - POST /nist/compare_strategies")
