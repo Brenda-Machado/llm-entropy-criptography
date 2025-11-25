@@ -6,24 +6,21 @@ Compara modelo base, fine-tuned e referência secrets
 
 import sys
 import os
+import argparse
 sys.path.insert(0, 'src')
-
 import numpy as np
 import secrets as py_secrets
 import json
-from scipy import stats
-from collections import Counter
 import matplotlib.pyplot as plt
 from typing import Dict, List
-
 from llm_client import LLMClient
 from nist_tests import NISTTests
 from test_nist_integration import NISTValidator
-
+from scipy import stats
+from collections import Counter
+from vector_store import QualityMetrics
 
 class ReportDataGenerator:
-    """Gera dados para o relatório científico"""
-    
     def __init__(self):
         self.results = {
             'base_model': {'keys': [], 'metrics': []},
@@ -34,15 +31,8 @@ class ReportDataGenerator:
         }
     
     def generate_baseline_data(self, num_samples: int = 100):
-        """
-        Gera dados do modelo base (sem fine-tuning)
-        """
-        print("\n" + "="*80)
-        print("GERANDO DADOS: MODELO BASE (Gemma3)")
-        print("="*80)
-        
         client = LLMClient(
-            model='gemma3:latest',  # Modelo base
+            model='gemma3:latest', 
             key_size_bits=256,
             strategy='few-shot',
             temperature_preset='high_entropy'
@@ -62,9 +52,6 @@ class ReportDataGenerator:
         self._print_summary('base_model')
     
     def generate_finetuned_data(self, num_samples: int = 100):
-        """
-        Gera dados do modelo fine-tuned com diferentes estratégias
-        """
         strategies = {
             'few_shot': 'few-shot',
             'zero_shot': 'zero-shot',
@@ -72,12 +59,8 @@ class ReportDataGenerator:
         }
         
         for key, strategy in strategies.items():
-            print("\n" + "="*80)
-            print(f"GERANDO DADOS: FINE-TUNED ({strategy})")
-            print("="*80)
-            
             client = LLMClient(
-                model='gemma3-entropy-v2',  # Modelo fine-tuned
+                model='gemma3-entropy-v2',  
                 key_size_bits=256,
                 strategy=strategy,
                 temperature_preset='high_entropy'
@@ -97,20 +80,10 @@ class ReportDataGenerator:
             self._print_summary(key)
     
     def generate_reference_data(self, num_samples: int = 100):
-        """
-        Gera dados de referência usando secrets (CSPRNG)
-        """
-        print("\n" + "="*80)
-        print("GERANDO DADOS: REFERÊNCIA (secrets)")
-        print("="*80)
-        
-        from vector_store import QualityMetrics
-        
         for i in range(num_samples):
-            key_bytes = py_secrets.token_bytes(32)  # 256 bits
+            key_bytes = py_secrets.token_bytes(32) 
             key_hex = key_bytes.hex()
             
-            # Calcula métricas
             entropy = QualityMetrics.calculate_shannon_entropy(key_bytes)
             unique_bytes = QualityMetrics.count_unique_bytes(key_bytes)
             quality_score = QualityMetrics.calculate_quality_score(key_bytes, 256)
@@ -129,7 +102,6 @@ class ReportDataGenerator:
         self._print_summary('secrets_ref')
     
     def _print_summary(self, config_name: str):
-        """Imprime sumário das métricas"""
         metrics = self.results[config_name]['metrics']
         
         if not metrics:
@@ -149,13 +121,6 @@ class ReportDataGenerator:
         print(f"    Entropia Válida: {valid_entropy}/{len(metrics)} ({valid_entropy/len(metrics)*100:.1f}%)")
     
     def generate_comparison_table(self) -> Dict:
-        """
-        Gera dados para Tabela: Comparação entre modelo base, fine-tuned e referência
-        """
-        print("\n" + "="*80)
-        print("GERANDO TABELA DE COMPARAÇÃO")
-        print("="*80)
-        
         comparison = {}
         
         for config_name in ['base_model', 'few_shot', 'secrets_ref']:
@@ -178,7 +143,6 @@ class ReportDataGenerator:
                 'valid_entropy_pct': valid_entropy_pct
             }
         
-        # Calcula melhorias
         if 'base_model' in comparison and 'few_shot' in comparison:
             base = comparison['base_model']
             fs = comparison['few_shot']
@@ -202,15 +166,13 @@ class ReportDataGenerator:
                 'valid_entropy_pp': fs['valid_entropy_pct'] - ref['valid_entropy_pct']
             }
         
-        # Imprime tabela
         self._print_comparison_table(comparison)
         
         return comparison
     
     def _print_comparison_table(self, comparison: Dict):
-        """Imprime tabela formatada em LaTeX"""
         print("\n" + "="*80)
-        print("TABELA LATEX: Comparação entre modelo base, fine-tuned e referência")
+        print("Comparação entre modelo base, fine-tuned e referência")
         print("="*80)
         print()
         
@@ -258,33 +220,21 @@ class ReportDataGenerator:
         print("\\end{table}")
     
     def analyze_distribution(self):
-        """
-        Análise de distribuição: teste chi-quadrado de uniformidade
-        """
-        print("\n" + "="*80)
-        print("ANÁLISE DE DISTRIBUIÇÃO")
-        print("="*80)
-        
         for config_name in ['few_shot', 'secrets_ref', 'base_model']:
             if config_name not in self.results or not self.results[config_name]['keys']:
                 continue
             
             print(f"\n{config_name.upper()}:")
             
-            # Coleta todos os bytes
             all_bytes = []
+
             for key_hex in self.results[config_name]['keys']:
                 key_bytes = bytes.fromhex(key_hex)
                 all_bytes.extend(key_bytes)
             
-            # Conta frequências
             observed_freq = Counter(all_bytes)
-            
-            # Frequência esperada (uniforme)
             n_bytes = len(all_bytes)
             expected_freq = n_bytes / 256
-            
-            # Teste chi-quadrado
             observed = [observed_freq.get(i, 0) for i in range(256)]
             expected = [expected_freq] * 256
             
@@ -297,30 +247,21 @@ class ReportDataGenerator:
             print(f"  Resultado: {'UNIFORME (não rejeita H0)' if p_value > 0.05 else 'NÃO UNIFORME (rejeita H0)'}")
     
     def analyze_autocorrelation(self, max_lag: int = 10):
-        """
-        Análise de autocorrelação
-        """
-        print("\n" + "="*80)
-        print("ANÁLISE DE AUTOCORRELAÇÃO")
-        print("="*80)
-        
         for config_name in ['few_shot', 'secrets_ref']:
             if config_name not in self.results or not self.results[config_name]['keys']:
                 continue
             
             print(f"\n{config_name.upper()}:")
-            
-            # Converte chaves para série temporal de bytes
+
             all_bytes = []
+
             for key_hex in self.results[config_name]['keys']:
                 key_bytes = bytes.fromhex(key_hex)
                 all_bytes.extend(key_bytes)
-            
-            # Calcula autocorrelação
+
             series = np.array(all_bytes, dtype=float)
             mean = np.mean(series)
             var = np.var(series)
-            
             autocorr = []
             n = len(series)
             confidence_interval = 2 / np.sqrt(n)
@@ -335,22 +276,18 @@ class ReportDataGenerator:
             print(f"  Autocorrelações:")
             
             all_within_bounds = True
+
             for lag, r in enumerate(autocorr, 1):
                 within = "✓" if abs(r) < confidence_interval else "✗"
+
                 print(f"    Lag {lag}: {r:+.4f} {within}")
+
                 if abs(r) >= confidence_interval:
                     all_within_bounds = False
             
             print(f"\n  Resultado: {'SEM estrutura temporal significativa' if all_within_bounds else 'Estrutura temporal detectada'}")
     
     def run_nist_tests(self, num_samples: int = 10):
-        """
-        Executa testes NIST em amostras
-        """
-        print("\n" + "="*80)
-        print("EXECUTANDO TESTES NIST")
-        print("="*80)
-        
         nist_results = {}
         
         for config_name in ['few_shot', 'base_model', 'secrets_ref']:
@@ -359,9 +296,7 @@ class ReportDataGenerator:
             
             print(f"\n{config_name.upper()}:")
             
-            # Seleciona amostras
             keys_sample = self.results[config_name]['keys'][:num_samples]
-            
             pass_rates = []
             
             for i, key_hex in enumerate(keys_sample):
@@ -388,13 +323,6 @@ class ReportDataGenerator:
         return nist_results
     
     def plot_entropy_distribution(self, save_path: str = 'entropy_distribution.pdf'):
-        """
-        Gera gráfico de distribuição de entropia
-        """
-        print("\n" + "="*80)
-        print("GERANDO GRÁFICO DE DISTRIBUIÇÃO")
-        print("="*80)
-        
         plt.figure(figsize=(12, 6))
         
         colors = {
@@ -433,15 +361,12 @@ class ReportDataGenerator:
         plt.close()
     
     def save_results(self, filename: str = 'report_data.json'):
-        """Salva todos os resultados em JSON"""
-        print(f"\nSalvando resultados em: {filename}")
-        
-        # Prepara dados para serialização
         output = {}
+
         for config, data in self.results.items():
             output[config] = {
                 'num_samples': len(data['keys']),
-                'keys': data['keys'][:10],  # Apenas primeiras 10 chaves
+                'keys': data['keys'][:10], 
                 'metrics_summary': {
                     'entropy_mean': float(np.mean([m['entropy'] for m in data['metrics']])) if data['metrics'] else 0,
                     'entropy_std': float(np.std([m['entropy'] for m in data['metrics']])) if data['metrics'] else 0,
@@ -452,17 +377,13 @@ class ReportDataGenerator:
         
         with open(filename, 'w') as f:
             json.dump(output, f, indent=2)
-        
-        print(f"  ✓ Resultados salvos")
 
 
 def main():
-    """Executa geração completa de dados para o relatório"""
-    import argparse
-    
     parser = argparse.ArgumentParser(description="Gera dados para o relatório")
     parser.add_argument('--samples', type=int, default=100, help='Número de amostras por configuração')
     parser.add_argument('--nist-samples', type=int, default=10, help='Número de amostras para testes NIST')
+    parser.add_argument('--only-gemma', action='store_true', help='Gera apenas dados do Gemma (recomendado)')
     parser.add_argument('--skip-baseline', action='store_true', help='Pula geração do modelo base')
     parser.add_argument('--skip-finetuned', action='store_true', help='Pula geração do modelo fine-tuned')
     parser.add_argument('--skip-reference', action='store_true', help='Pula geração da referência')
@@ -471,35 +392,40 @@ def main():
     
     generator = ReportDataGenerator()
     
-    # Gera dados
-    if not args.skip_baseline:
-        generator.generate_baseline_data(args.samples)
-    
-    if not args.skip_finetuned:
+    if args.only_gemma:
         generator.generate_finetuned_data(args.samples)
+        generator.generate_reference_data(min(args.samples, 100)) 
+    else:
+        if not args.skip_finetuned:
+            generator.generate_finetuned_data(args.samples)
+        
+        if not args.skip_baseline:
+            generator.generate_baseline_data(args.samples)
+
+        if not args.skip_reference:
+            generator.generate_reference_data(min(args.samples, 100))
     
-    if not args.skip_reference:
-        generator.generate_reference_data(args.samples)
-    
-    # Análises
     generator.generate_comparison_table()
     generator.analyze_distribution()
     generator.analyze_autocorrelation()
     generator.run_nist_tests(args.nist_samples)
-    
-    # Gera gráfico
     generator.plot_entropy_distribution()
-    
-    # Salva resultados
     generator.save_results()
     
     print("\n" + "="*80)
-    print("GERAÇÃO DE DADOS CONCLUÍDA!")
+    print("INTERPRETAÇÃO DOS RESULTADOS:")
     print("="*80)
-    print("\nArquivos gerados:")
-    print("  - report_data.json: dados completos")
-    print("  - entropy_distribution.pdf: gráfico de distribuição")
-    print("\nUse os dados impressos acima para preencher o relatório LaTeX.")
+    print("\nDADOS PRINCIPAIS (Gemma3):")
+    print("   - few_shot: modelo fine-tuned com estratégia few-shot")
+    print("   - zero_shot: modelo fine-tuned com estratégia zero-shot")
+    print("   - cot: modelo fine-tuned com estratégia chain-of-thought")
+    print("\nBASELINE DE COMPARAÇÃO:")
+    print("   - secrets: gerador criptográfico estabelecido (Python CSPRNG)")
+    print("   - base_model: Gemma3 sem fine-tuning (baseline interno)")
+    print("\nMÉTRICAS DE AVALIAÇÃO:")
+    print("   - Entropia Shannon: deve estar próxima de 8.0 bits/byte")
+    print("   - Quality Score: deve ser ≥ 90")
+    print("   - Testes NIST: taxa de aprovação deve ser ≥ 95%")
 
 
 if __name__ == "__main__":
