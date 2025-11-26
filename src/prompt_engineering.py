@@ -153,28 +153,28 @@ class TemperatureConfig:
             'top_p': 0.7,
             'top_k': 20,
             'repeat_penalty': 1.5,
-            'description': 'Baixa aleatoriedade, mais determinístico'
+            'description': 'Low randomness, more deterministic'
         },
         'balanced': {
             'temperature': 0.9,
             'top_p': 0.9,
             'top_k': 50,
             'repeat_penalty': 1.3,
-            'description': 'Equilíbrio entre aleatoriedade e coerência'
+            'description': 'Balance between randomness and coherence'
         },
         'high_entropy': {
             'temperature': 1.3,
             'top_p': 0.95,
             'top_k': 80,
             'repeat_penalty': 1.2,
-            'description': 'Alta aleatoriedade, máxima entropia'
+            'description': 'High randomness, maximum entropy'
         },
         'extreme_random': {
             'temperature': 1.8,
             'top_p': 0.98,
             'top_k': 100,
             'repeat_penalty': 1.1,
-            'description': 'Aleatoriedade extrema (pode gerar ruído)'
+            'description': 'Extreme randomness (may generate noise)'
         }
     }
     

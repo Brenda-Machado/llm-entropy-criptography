@@ -89,17 +89,17 @@ class NISTValidator:
         
         if combined_score >= 95 and nist_pass_rate >= 95:
             grade = 'EXCELLENT'
-            recommendation = 'Altamente recomendado para uso criptográfico'
+            recommendation = 'Highly recommended for cryptographic use'
         elif combined_score >= 85 and nist_pass_rate >= 85:
             grade = 'GOOD'
-            recommendation = 'Adequado para uso criptográfico'
+            recommendation = 'Suitable for cryptographic use'
         elif combined_score >= 70 and nist_pass_rate >= 70:
             grade = 'MODERATE'
-            recommendation = 'Uso criptográfico não recomendado'
+            recommendation = 'Cryptographic use not recommended'
         else:
             grade = 'POOR'
-            recommendation = 'NÃO adequado para uso criptográfico'
-        
+            recommendation = 'NOT suitable for cryptographic use'
+
         return {
             'combined_score': combined_score,
             'generation_score': gen_score,
@@ -290,7 +290,7 @@ def test_single_key():
         print(f"Taxa de Aprovação NIST: {quality['nist_pass_rate']:.2f}%")
         print(f"Classificação: {quality['grade']}")
         print(f"Recomendação: {quality['recommendation']}")
-        print(f"Grau Criptográfico: {'✓ SIM' if quality['cryptographic_grade'] else '✗ NÃO'}")
+        print(f"Grau Criptográfico: {'✓ YES' if quality['cryptographic_grade'] else '✗ NO'}")
     else:
         print(f"\nERRO: {result['error']}")
 

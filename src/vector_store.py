@@ -6,9 +6,9 @@ vector_store.py
 
 import json
 import numpy as np
-from typing import List, Dict
 import secrets
 from pathlib import Path
+from typing import List, Dict
 
 class QualityMetrics:
 
